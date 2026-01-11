@@ -34,6 +34,11 @@ docker-compose logs -f
 
 http://localhost:3000
 
+관리자 대시보드:
+
+- 로컬: http://localhost:3000/card/dashboard/
+- 서버: https://<your-domain>/card/dashboard/
+
 ---
 
 ## 개발 환경 설정

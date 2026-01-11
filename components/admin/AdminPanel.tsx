@@ -1,72 +1,73 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Lock, AlertCircle } from 'lucide-react'
-import ReferralManager from './ReferralManager'
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Lock, AlertCircle } from "lucide-react";
+import ReferralManager from "./ReferralManager";
+import CardSyncPanel from "./CardSyncPanel";
 
 export default function AdminPanel() {
-  const [adminKey, setAdminKey] = useState('')
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [isVerifying, setIsVerifying] = useState(false)
+  const [adminKey, setAdminKey] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   // Try to load saved admin key from sessionStorage
   useEffect(() => {
-    const savedKey = sessionStorage.getItem('admin_key')
+    const savedKey = sessionStorage.getItem("admin_key");
     if (savedKey) {
-      setAdminKey(savedKey)
-      verifyKey(savedKey)
+      setAdminKey(savedKey);
+      verifyKey(savedKey);
     }
-  }, [])
+  }, []);
 
   const verifyKey = async (key: string) => {
-    setIsVerifying(true)
-    setError(null)
+    setIsVerifying(true);
+    setError(null);
 
     try {
       // Try to fetch referrals with the key
-      const res = await fetch('/card/api/admin/referrals/', {
+      const res = await fetch("/card/api/admin/referrals/", {
         headers: {
-          'X-Admin-Key': key,
+          "X-Admin-Key": key,
         },
-      })
+      });
 
       if (res.status === 401) {
-        setError('Invalid admin key')
-        setIsAuthenticated(false)
-        sessionStorage.removeItem('admin_key')
-        return
+        setError("Invalid admin key");
+        setIsAuthenticated(false);
+        sessionStorage.removeItem("admin_key");
+        return;
       }
 
       if (!res.ok) {
-        throw new Error('Failed to verify admin key')
+        throw new Error("Failed to verify admin key");
       }
 
       // Key is valid
-      setIsAuthenticated(true)
-      sessionStorage.setItem('admin_key', key)
+      setIsAuthenticated(true);
+      sessionStorage.setItem("admin_key", key);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
-      setIsAuthenticated(false)
+      setError(err instanceof Error ? err.message : "Something went wrong");
+      setIsAuthenticated(false);
     } finally {
-      setIsVerifying(false)
+      setIsVerifying(false);
     }
-  }
+  };
 
   const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault()
-    verifyKey(adminKey)
-  }
+    e.preventDefault();
+    verifyKey(adminKey);
+  };
 
   const handleLogout = () => {
-    setAdminKey('')
-    setIsAuthenticated(false)
-    sessionStorage.removeItem('admin_key')
-  }
+    setAdminKey("");
+    setIsAuthenticated(false);
+    sessionStorage.removeItem("admin_key");
+  };
 
   if (!isAuthenticated) {
     return (
@@ -116,12 +117,12 @@ export default function AdminPanel() {
               className="w-full"
               disabled={isVerifying || !adminKey}
             >
-              {isVerifying ? 'Verifying...' : 'Access Admin Panel'}
+              {isVerifying ? "Verifying..." : "Access Admin Panel"}
             </Button>
           </form>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -133,8 +134,10 @@ export default function AdminPanel() {
         </Button>
       </div>
 
-      {/* Referral Manager */}
-      <ReferralManager adminKey={adminKey} />
+      <div className="space-y-8">
+        <CardSyncPanel adminKey={adminKey} />
+        <ReferralManager adminKey={adminKey} />
+      </div>
     </div>
-  )
+  );
 }
