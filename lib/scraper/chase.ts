@@ -41,20 +41,49 @@ export async function crawlChaseAllCards(): Promise<
 
   $("a").each((_, el) => {
     const href = $(el).attr("href") || "";
-    const text = $(el).text().trim();
+    let text = $(el).text().trim();
     if (!href || !text) return;
-    // Heuristic: keep credit-card detail links
-    if (!href.includes("/credit-cards/")) return;
-    const name = text.replace(/\s+/g, " ").trim();
-    if (!name) return;
+
+    // Pattern 1: Must be a credit card detail page
+    // Real cards: /credit-cards/{card-name}/ (single path segment after /credit-cards/)
+    // Exclude: /credit-cards/compare, /credit-cards/faq, etc.
+    const cardDetailRegex = /^\/credit-cards\/([a-z0-9\-]+)\/?$/i;
+    if (!cardDetailRegex.test(href)) return;
+
+    // Pattern 2: Normalize card name
+    const name = text
+      .replace(/\s*opens(?:\s+\w+)*\s+in\s+a\s+new\s+window\s*/gi, "")
+      .replace(/\s*\[new\]\s*/gi, "")
+      .replace(/\s*†\s*/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    // Pattern 3: Real card names are meaningful (not just nav links)
+    // Minimum 5 chars, doesn't start with numbers
+    if (!name || name.length < 5 || /^\d/.test(name)) return;
+
+    // Pattern 4: Exclude known non-card pages
+    const lowerName = name.toLowerCase();
+    const exclusions = [
+      "compare",
+      "faq",
+      "glossary",
+      "education",
+      "journey",
+      "agreement",
+      "terms",
+      "score",
+      "rewards",
+      "apply",
+      "learn",
+    ];
+    if (exclusions.some((ex) => lowerName.includes(ex))) return;
+
     const slug = slugify(name);
     if (seen.has(slug)) return;
     seen.add(slug);
-    const absoluteHref = href.startsWith("http")
-      ? href
-      : `https://creditcards.chase.com${
-          href.startsWith("/") ? href : `/${href}`
-        }`;
+
+    const absoluteHref = `https://creditcards.chase.com${href}`;
     cards.push({ name, href: absoluteHref, slug });
   });
 

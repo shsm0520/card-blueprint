@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Database } from "lucide-react";
+import { RefreshCw, Database, Trash2 } from "lucide-react";
 
 interface Card {
   id: string;
@@ -30,6 +30,7 @@ export default function CardSyncPanel({ adminKey }: CardSyncPanelProps) {
   const [cards, setCards] = useState<Card[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [summary, setSummary] = useState<SyncSummary | null>(null);
 
@@ -70,7 +71,31 @@ export default function CardSyncPanel({ adminKey }: CardSyncPanelProps) {
       setError(err instanceof Error ? err.message : "Sync failed");
     } finally {
       setIsSyncing(false);
+    
+
+  const handleDeleteCard = async (cardId: string, cardName: string) => {
+    if (!confirm(`삭제하시겠습니까? "${cardName}"`)) {
+      return;
     }
+
+    setDeletingId(cardId);
+    setError(null);
+    try {
+      const res = await fetch(`/card/api/admin/cards/${cardId}`, {
+        method: "DELETE",
+        headers: { "X-Admin-Key": adminKey },
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to delete card");
+      }
+      await loadCards();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed");
+    } finally {
+      setDeletingId(null);
+    }
+  };}
   };
 
   return (
@@ -114,37 +139,51 @@ export default function CardSyncPanel({ adminKey }: CardSyncPanelProps) {
           <h3 className="text-sm font-semibold text-gray-800">
             Cards ({cards.length})
           </h3>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadCards}
-            disabled={isLoading}
-          >
-            Refresh
-          </Button>
-        </div>
-
-        {isLoading ? (
-          <div className="text-sm text-gray-500">Loading cards...</div>
-        ) : cards.length === 0 ? (
-          <div className="text-sm text-gray-500">No cards found.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-600 border-b">
-                  <th className="py-2 pr-3">Name</th>
-                  <th className="py-2 pr-3">Issuer</th>
-                  <th className="py-2 pr-3">Type</th>
-                  <th className="py-2 pr-3">Annual Fee</th>
-                  <th className="py-2 pr-3">Rewards</th>
-                  <th className="py-2">Tags</th>
+          <Button pr-3">Tags</th>
+                  <th className="py-2 pr-3 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {cards.map((card) => (
                   <tr key={card.id} className="align-top">
                     <td className="py-2 pr-3 font-medium text-gray-900">
+                      {card.name}
+                    </td>
+                    <td className="py-2 pr-3 text-gray-700">{card.issuer}</td>
+                    <td className="py-2 pr-3 text-gray-700">{card.cardType}</td>
+                    <td className="py-2 pr-3 text-gray-700">
+                      ${card.annualFee}
+                    </td>
+                    <td className="py-2 pr-3 text-gray-700">
+                      {card.rewardType}
+                    </td>
+                    <td className="py-2 pr-3 flex flex-wrap gap-1">
+                      {card.tags?.length ? (
+                        card.tags.map((tag: string) => (
+                          <Badge
+                            key={tag}
+                            variant="outline"
+                            className="text-xs"
+                          >
+                            {tag}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-gray-500">—</span>
+                      )}
+                    </td>
+                    <td className="py-2 pr-3 text-center">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          handleDeleteCard(card.id, card.name)
+                        }
+                        disabled={deletingId === card.id}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>className="py-2 pr-3 font-medium text-gray-900">
                       {card.name}
                     </td>
                     <td className="py-2 pr-3 text-gray-700">{card.issuer}</td>
