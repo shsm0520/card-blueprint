@@ -7,6 +7,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { findCardSlug } from "./card-finder";
 
 export interface TemplateInput {
   chase524Status: "under" | "over" | "unknown";
@@ -48,42 +49,65 @@ export async function generateTemplate(
  * Template for users with thin credit file (0-12 months)
  * Start with beginner-friendly cards
  */
-function getThinFileTemplate(goal: string): TemplateNode[] {
+async function getThinFileTemplate(goal: string): Promise<TemplateNode[]> {
   const template: TemplateNode[] = [];
 
   // Step 1: Build credit with no-annual-fee card
-  template.push({
-    cardSlug: "chase-freedom-unlimited",
-    position: 0,
-    note: "Start here: Build credit history with no annual fee",
-  });
+  const freedomUnlimited = await findCardSlug("chase-freedom-unlimited");
+  if (freedomUnlimited) {
+    template.push({
+      cardSlug: freedomUnlimited,
+      position: 0,
+      note: "Start here: Build credit history with no annual fee",
+    });
+  }
 
   // Step 2: Add another no-fee card after 3 months (credit score recovery period)
-  template.push({
-    cardSlug: "chase-freedom-flex",
-    parentCardSlug: "chase-freedom-unlimited",
-    position: 1,
-    note: "Wait 3 months for credit score recovery (avg -12 pts → ±0)",
-    monthsAfterPrevious: 3,
-  });
+  const freedomFlex = await findCardSlug("chase-freedom-flex");
+  if (freedomFlex && freedomUnlimited) {
+    template.push({
+      cardSlug: freedomFlex,
+      parentCardSlug: freedomUnlimited,
+      position: 1,
+      note: "Wait 3 months for credit score recovery (avg -12 pts → ±0)",
+      monthsAfterPrevious: 3,
+    });
+  }
 
   // Step 3: First premium card based on goal after another 3 months
-  if (goal === "cashback") {
-    template.push({
-      cardSlug: "amex-blue-cash-preferred",
-      parentCardSlug: "chase-freedom-flex",
-      position: 2,
-      note: "First annual fee card after 3 months recovery",
-      monthsAfterPrevious: 3,
-    });
-  } else {
-    template.push({
-      cardSlug: "chase-sapphire-preferred",
-      parentCardSlug: "chase-freedom-flex",
-      position: 2,
-      note: "Start earning transferable points after 3 months",
-      monthsAfterPrevious: 3,
-    });
+  const parentSlug = freedomFlex || freedomUnlimited;
+  if (parentSlug) {
+    if (goal === "cashback") {
+      const blueCashPreferred = await findCardSlug("amex-blue-cash-preferred");
+      if (blueCashPreferred) {
+        template.push({
+          cardSlug: blueCashPreferred,
+          parentCardSlug: parentSlug,
+          position: 2,
+          note: "First annual fee card after 3 months recovery",
+          monthsAfterPrevious: 3,
+        });
+      }
+    } else {
+      // Try Chase Sapphire Preferred first, fallback to Amex Gold
+      let premiumCard = await findCardSlug("chase-sapphire-preferred");
+      let premiumNote = "Start earning transferable points after 3 months";
+
+      if (!premiumCard) {
+        premiumCard = await findCardSlug("amex-gold");
+        premiumNote = "Start earning Amex points for travel after 3 months";
+      }
+
+      if (premiumCard) {
+        template.push({
+          cardSlug: premiumCard,
+          parentCardSlug: parentSlug,
+          position: 2,
+          note: premiumNote,
+          monthsAfterPrevious: 3,
+        });
+      }
+    }
   }
 
   return template;
@@ -93,70 +117,107 @@ function getThinFileTemplate(goal: string): TemplateNode[] {
  * Template for under 5/24 users
  * Maximize Chase cards before hitting 5/24
  */
-function getUnder524Template(
+async function getUnder524Template(
   creditProfile: string,
   goal: string
-): TemplateNode[] {
+): Promise<TemplateNode[]> {
   const template: TemplateNode[] = [];
 
   // Starting card based on goal
   if (goal === "cashback") {
     // Cashback strategy
-    template.push({
-      cardSlug: "chase-freedom-unlimited",
-      position: 0,
-      note: "Foundation: 1.5% cashback on everything",
-    });
-
-    template.push({
-      cardSlug: "chase-freedom-flex",
-      parentCardSlug: "chase-freedom-unlimited",
-      position: 1,
-      note: "5% rotating categories - Wait 3 months for recovery",
-      monthsAfterPrevious: 3,
-    });
-
-    if (creditProfile === "3plus") {
+    const freedomUnlimited = await findCardSlug("chase-freedom-unlimited");
+    if (freedomUnlimited) {
       template.push({
-        cardSlug: "chase-sapphire-preferred",
-        parentCardSlug: "chase-freedom-flex",
-        position: 2,
-        note: "Convert cashback to travel points (optional) - 3 months",
-        monthsAfterPrevious: 3,
+        cardSlug: freedomUnlimited,
+        position: 0,
+        note: "Foundation: 1.5% cashback on everything",
       });
+
+      const freedomFlex = await findCardSlug("chase-freedom-flex");
+      if (freedomFlex) {
+        template.push({
+          cardSlug: freedomFlex,
+          parentCardSlug: freedomUnlimited,
+          position: 1,
+          note: "5% rotating categories - Wait 3 months for recovery",
+          monthsAfterPrevious: 3,
+        });
+      }
+
+      if (creditProfile === "3plus") {
+        const sapphirePreferred = await findCardSlug("chase-sapphire-preferred");
+        if (sapphirePreferred) {
+          template.push({
+            cardSlug: sapphirePreferred,
+            parentCardSlug: freedomFlex || freedomUnlimited,
+            position: 2,
+            note: "Convert cashback to travel points (optional) - 3 months",
+            monthsAfterPrevious: 3,
+          });
+        }
+      }
     }
   } else {
     // Travel strategy (airline/hotel/status)
-    template.push({
-      cardSlug: "chase-sapphire-preferred",
-      position: 0,
-      note: "Foundation: Chase Ultimate Rewards ecosystem",
-    });
+    // Try Chase Sapphire Preferred, fallback to Amex Gold
+    let foundationCard = await findCardSlug("chase-sapphire-preferred");
+    let foundationNote = "Foundation: Chase Ultimate Rewards ecosystem";
 
-    template.push({
-      cardSlug: "chase-freedom-unlimited",
-      parentCardSlug: "chase-sapphire-preferred",
-      position: 1,
-      note: "Earn more UR on everyday spending - 3 months recovery",
-      monthsAfterPrevious: 3,
-    });
+    if (!foundationCard) {
+      foundationCard = await findCardSlug("amex-gold");
+      foundationNote = "Foundation: Earn Amex points for travel";
+    }
 
-    template.push({
-      cardSlug: "chase-ink-business-preferred",
-      parentCardSlug: "chase-sapphire-preferred",
-      position: 2,
-      note: "Business card: Doesn't count toward 5/24 - 3 months",
-      monthsAfterPrevious: 3,
-    });
-
-    if (creditProfile === "3plus") {
+    if (foundationCard) {
       template.push({
-        cardSlug: "chase-sapphire-reserve",
-        parentCardSlug: "chase-ink-business-preferred",
-        position: 3,
-        note: "Premium travel benefits - 3 months recovery",
-        monthsAfterPrevious: 3,
+        cardSlug: foundationCard,
+        position: 0,
+        note: foundationNote,
       });
+
+      const freedomUnlimited = await findCardSlug("chase-freedom-unlimited");
+      if (freedomUnlimited) {
+        template.push({
+          cardSlug: freedomUnlimited,
+          parentCardSlug: foundationCard,
+          position: 1,
+          note: "Earn more points on everyday spending - 3 months recovery",
+          monthsAfterPrevious: 3,
+        });
+      }
+
+      const inkPreferred = await findCardSlug("chase-ink-business-preferred");
+      if (inkPreferred) {
+        template.push({
+          cardSlug: inkPreferred,
+          parentCardSlug: foundationCard,
+          position: 2,
+          note: "Business card: Doesn't count toward 5/24 - 3 months",
+          monthsAfterPrevious: 3,
+        });
+      }
+
+      if (creditProfile === "3plus") {
+        // Try Chase Sapphire Reserve, fallback to Amex Platinum
+        let premiumCard = await findCardSlug("chase-sapphire-reserve");
+        let premiumNote = "Premium travel benefits - 3 months recovery";
+
+        if (!premiumCard) {
+          premiumCard = await findCardSlug("amex-platinum");
+          premiumNote = "Premium: Lounge access and travel benefits - 3 months";
+        }
+
+        if (premiumCard) {
+          template.push({
+            cardSlug: premiumCard,
+            parentCardSlug: inkPreferred || foundationCard,
+            position: 3,
+            note: premiumNote,
+            monthsAfterPrevious: 3,
+          });
+        }
+      }
     }
   }
 
@@ -167,73 +228,130 @@ function getUnder524Template(
  * Template for over 5/24 users
  * Focus on Amex, Citi, Capital One
  */
-function getOver524Template(
+async function getOver524Template(
   creditProfile: string,
   goal: string
-): TemplateNode[] {
+): Promise<TemplateNode[]> {
   const template: TemplateNode[] = [];
 
   if (goal === "cashback") {
     // Cashback strategy without Chase
-    template.push({
-      cardSlug: "citi-double-cash",
-      position: 0,
-      note: "Foundation: 2% on everything, no annual fee",
-    });
+    // Try Citi first, fallback to Chase if not available
+    let foundationCard = await findCardSlug("citi-double-cash");
+    let foundationNote = "Foundation: 2% on everything, no annual fee";
 
-    template.push({
-      cardSlug: "citi-custom-cash",
-      parentCardSlug: "citi-double-cash",
-      position: 1,
-      note: "5% on top spending category - 3 months recovery",
-      monthsAfterPrevious: 3,
-    });
+    if (!foundationCard) {
+      // Fallback to Chase Freedom Unlimited
+      foundationCard = await findCardSlug("chase-freedom-unlimited");
+      foundationNote = "Foundation: 1.5% cashback on everything, no annual fee";
+    }
 
-    template.push({
-      cardSlug: "amex-blue-cash-preferred",
-      parentCardSlug: "citi-custom-cash",
-      position: 2,
-      note: "6% on groceries, 3% on gas - 3 months",
-      monthsAfterPrevious: 3,
-    });
+    if (foundationCard) {
+      template.push({
+        cardSlug: foundationCard,
+        position: 0,
+        note: foundationNote,
+      });
+
+      // Try to add rotating category card
+      let rotatingCard = await findCardSlug("citi-custom-cash");
+      let rotatingNote = "5% on top spending category - 3 months recovery";
+
+      if (!rotatingCard) {
+        rotatingCard = await findCardSlug("chase-freedom-flex");
+        rotatingNote = "5% rotating categories - 3 months recovery";
+      }
+
+      if (rotatingCard) {
+        template.push({
+          cardSlug: rotatingCard,
+          parentCardSlug: foundationCard,
+          position: 1,
+          note: rotatingNote,
+          monthsAfterPrevious: 3,
+        });
+      }
+
+      const blueCashPreferred = await findCardSlug("amex-blue-cash-preferred");
+      if (blueCashPreferred) {
+        template.push({
+          cardSlug: blueCashPreferred,
+          parentCardSlug: rotatingCard || foundationCard,
+          position: 2,
+          note: "6% on groceries, 3% on gas - 3 months",
+          monthsAfterPrevious: 3,
+        });
+      }
+    }
   } else if (goal === "airline") {
     // Airline strategy
-    template.push({
-      cardSlug: "amex-platinum",
-      position: 0,
-      note: "Premium: 5x on flights, lounge access",
-    });
+    const amexPlatinum = await findCardSlug("amex-platinum");
+    if (amexPlatinum) {
+      template.push({
+        cardSlug: amexPlatinum,
+        position: 0,
+        note: "Premium: 5x on flights, lounge access",
+      });
 
-    template.push({
-      cardSlug: "amex-gold",
-      parentCardSlug: "amex-platinum",
-      position: 1,
-      note: "4x on dining, earn MR for flights - 3 months recovery",
-      monthsAfterPrevious: 3,
-    });
+      const amexGold = await findCardSlug("amex-gold");
+      if (amexGold) {
+        template.push({
+          cardSlug: amexGold,
+          parentCardSlug: amexPlatinum,
+          position: 1,
+          note: "4x on dining, earn MR for flights - 3 months recovery",
+          monthsAfterPrevious: 3,
+        });
+      }
 
-    template.push({
-      cardSlug: "capital-one-venture-x",
-      parentCardSlug: "amex-gold",
-      position: 2,
-      note: "Alternative: Simple redemption, lounge access - 3 months",
-      monthsAfterPrevious: 3,
-    });
+      // Try Capital One Venture X, fallback to Chase Sapphire Reserve
+      let thirdCard = await findCardSlug("capital-one-venture-x");
+      let thirdNote = "Alternative: Simple redemption, lounge access - 3 months";
+
+      if (!thirdCard) {
+        thirdCard = await findCardSlug("chase-sapphire-reserve");
+        thirdNote = "Alternative: Chase travel benefits, lounge access - 3 months";
+      }
+
+      if (thirdCard) {
+        template.push({
+          cardSlug: thirdCard,
+          parentCardSlug: amexGold || amexPlatinum,
+          position: 2,
+          note: thirdNote,
+          monthsAfterPrevious: 3,
+        });
+      }
+    }
   } else {
     // Hotel/Status strategy
-    template.push({
-      cardSlug: "amex-platinum",
-      position: 0,
-      note: "Foundation: Hotel status benefits",
-    });
+    const amexPlatinum = await findCardSlug("amex-platinum");
+    if (amexPlatinum) {
+      template.push({
+        cardSlug: amexPlatinum,
+        position: 0,
+        note: "Foundation: Hotel status benefits",
+      });
 
-    template.push({
-      cardSlug: "capital-one-venture-x",
-      parentCardSlug: "amex-platinum",
-      position: 1,
-      note: "Flexible points for hotel bookings - 3 months recovery",
-      monthsAfterPrevious: 3,
-    });
+      // Try Capital One Venture X, fallback to Chase Sapphire Reserve
+      let secondCard = await findCardSlug("capital-one-venture-x");
+      let secondNote = "Flexible points for hotel bookings - 3 months recovery";
+
+      if (!secondCard) {
+        secondCard = await findCardSlug("chase-sapphire-reserve");
+        secondNote = "Chase travel points for hotels - 3 months recovery";
+      }
+
+      if (secondCard) {
+        template.push({
+          cardSlug: secondCard,
+          parentCardSlug: amexPlatinum,
+          position: 1,
+          note: secondNote,
+          monthsAfterPrevious: 3,
+        });
+      }
+    }
   }
 
   return template;
