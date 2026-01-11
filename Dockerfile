@@ -43,8 +43,10 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 
-# Copy package files and prisma (optional for runtime tooling)
+# Copy package files, config, and prisma
 COPY package*.json ./
+COPY next.config.ts ./
+COPY tsconfig.json ./
 COPY prisma ./prisma/
 
 # Expose port
