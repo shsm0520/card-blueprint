@@ -96,41 +96,15 @@ async function extractCardDetails(
     // } else if (category === "student-credit-cards") {
     //   rewardType = "Student";
     // }
-    // Extract Benefits - look for common benefit section patterns
-    const benefits: string[] = [];
-    const benefitKeywords = [
-      "Earn",
-      "Bonus",
-      "Points",
-      "Cash Back",
-      "Travel",
-      "Reward",
-      "Credit",
-      "Free",
-    ];
 
-    $("li, div[class*='benefit'], div[class*='reward'], p").each(
-      (index: number, el: any) => {
-        const text = $(el).text().trim();
-        // Filter based on keywords and length
-        if (
-          text &&
-          text.length > 10 &&
-          text.length < 150 &&
-          benefitKeywords.some((kw) => text.includes(kw))
-        ) {
-          // Avoid duplicates
-          if (!benefits.includes(text)) {
-            benefits.push(text);
-          }
-        }
-      }
-    );
+    // Note: Benefits extraction disabled due to unreliable web scraping
+    // (picks up navigation/menu text instead of actual card benefits)
+    // TODO: Implement more reliable benefit extraction or use manual curation
 
     return {
       annualFee,
       rewardType,
-      benefits: benefits.length > 0 ? benefits.slice(0, 10) : undefined,
+      benefits: undefined, // Disabled for now
     };
   } catch (error) {
     console.error(`Error extracting details from ${cardHref}:`, error);

@@ -67,6 +67,15 @@ export async function POST(request: NextRequest) {
         const cardType = isBusiness ? "business" : "personal";
         const countsToward524 = !isBusiness; // Business cards don't count toward 5/24
 
+        // Build tags array: start with rewardType if available, then add benefits
+        const tags: string[] = [];
+        if (card.rewardType) {
+          tags.push(card.rewardType);
+        }
+        if (card.benefits && card.benefits.length > 0) {
+          tags.push(...card.benefits);
+        }
+
         return prisma.card.upsert({
           where: { slug: card.slug },
           update: {
@@ -74,7 +83,7 @@ export async function POST(request: NextRequest) {
             issuer: card.issuer,
             cardType,
             annualFee: card.annualFee ?? 0,
-            tags: JSON.stringify(card.benefits || []),
+            tags: JSON.stringify(tags),
             countsToward524,
             externalUrls: JSON.stringify([card.href]),
             lastCrawledAt: new Date(),
@@ -87,7 +96,7 @@ export async function POST(request: NextRequest) {
             issuer: card.issuer,
             cardType,
             annualFee: card.annualFee ?? 0,
-            tags: JSON.stringify(card.benefits || []),
+            tags: JSON.stringify(tags),
             countsToward524,
             externalUrls: JSON.stringify([card.href]),
             lastCrawledAt: new Date(),
