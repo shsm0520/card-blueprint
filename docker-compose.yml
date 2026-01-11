@@ -12,7 +12,7 @@ services:
       NEXTAUTH_URL: http://localhost:3000
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
       DATABASE_URL: file:/app/data/card_blueprint.db
-      ADMIN_TOKEN: ${ADMIN_TOKEN}
+      ADMIN_API_KEY: ${ADMIN_API_KEY}
     volumes:
       - card-blueprint-data:/app/data
     healthcheck:
