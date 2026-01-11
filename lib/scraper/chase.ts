@@ -44,23 +44,38 @@ export async function crawlChaseAllCards(): Promise<
     let text = $(el).text().trim();
     if (!href || !text) return;
 
-    // Pattern 1: Must be a credit card detail page
-    // Real cards: /credit-cards/{card-name}/ (single path segment after /credit-cards/)
-    // Exclude: /credit-cards/compare, /credit-cards/faq, etc.
-    const cardDetailRegex = /^\/credit-cards\/([a-z0-9\-]+)\/?$/i;
-    if (!cardDetailRegex.test(href)) return;
+    // Pattern 1: Match Chase credit card product pages
+    // Accepts: /cash-back-credit-cards/..., /travel-credit-cards/..., etc.
+    // Exclude: full URLs pointing elsewhere, apply/learn pages
+    const isCardPage =
+      /\/(?:cash-back|travel|business|secured|student)-credit-cards\/[a-z0-9\-]+/i.test(
+        href
+      );
+    const isExternal =
+      href.startsWith("http") && !href.includes("creditcards.chase.com");
+    const isApplyPage = /application|oao|secure/i.test(href);
+
+    if (!isCardPage || isExternal || isApplyPage) return;
 
     // Pattern 2: Normalize card name
     const name = text
       .replace(/\s*opens(?:\s+\w+)*\s+in\s+a\s+new\s+window\s*/gi, "")
       .replace(/\s*\[new\]\s*/gi, "")
+      .replace(/\s*®\s*/g, "")
       .replace(/\s*†\s*/g, "")
+      .replace(/\s*<sup>.*?<\/sup>\s*/g, "")
       .replace(/\s+/g, " ")
       .trim();
 
-    // Pattern 3: Real card names are meaningful (not just nav links)
-    // Minimum 5 chars, doesn't start with numbers
+    // Pattern 3: Real card names are meaningful
+    // Minimum 5 chars, doesn't start with numbers, remove extra tokens
     if (!name || name.length < 5 || /^\d/.test(name)) return;
+    if (
+      name.includes("Links to") ||
+      name.includes("Opens") ||
+      name.includes("Link")
+    )
+      return;
 
     // Pattern 4: Exclude known non-card pages
     const lowerName = name.toLowerCase();
@@ -76,6 +91,9 @@ export async function crawlChaseAllCards(): Promise<
       "rewards",
       "apply",
       "learn",
+      "see all",
+      "see details",
+      "pricing",
     ];
     if (exclusions.some((ex) => lowerName.includes(ex))) return;
 
@@ -83,7 +101,14 @@ export async function crawlChaseAllCards(): Promise<
     if (seen.has(slug)) return;
     seen.add(slug);
 
-    const absoluteHref = `https://creditcards.chase.com${href}`;
+    // Normalize URL - remove query params if we're building absolute URL
+    let absoluteHref = href;
+    if (!href.startsWith("http")) {
+      absoluteHref = `https://creditcards.chase.com${href}`;
+    }
+    // Remove query params to get clean product URL
+    absoluteHref = absoluteHref.split("?")[0];
+
     cards.push({ name, href: absoluteHref, slug });
   });
 

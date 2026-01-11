@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("POST /api/dashboard/cards/sync error:", error);
+    console.error("POST /card/api/dashboard/cards/sync/ error:", error);
     return NextResponse.json(
       { success: false, error: "Failed to sync cards" },
       { status: 500 }
