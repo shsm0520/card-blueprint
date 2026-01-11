@@ -1,65 +1,102 @@
-import Image from "next/image";
+import { Metadata } from 'next'
+import CreateTreeForm from '@/components/create/CreateTreeForm'
+import Disclaimers from '@/components/tree/Disclaimers'
+import { CreditCard } from 'lucide-react'
 
-export default function Home() {
+export const metadata: Metadata = {
+  title: 'Create Your Card Strategy Tree',
+  description:
+    'Build a personalized credit card strategy roadmap. Get recommendations based on your credit profile, Chase 5/24 status, and goals.',
+  robots: {
+    index: false, // Don't index creation page
+    follow: true,
+  },
+}
+
+export default function HomePage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-3 bg-blue-600 rounded-lg">
+              <CreditCard className="w-8 h-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900">
+                Card Strategy Tree
+              </h1>
+              <p className="text-gray-600 mt-1">
+                Build your personalized roadmap
+              </p>
+            </div>
+          </div>
+          <p className="text-gray-700 leading-relaxed">
+            Create a visual credit card application strategy based on your
+            credit profile and goals. Get personalized recommendations and
+            share your strategy with others.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </header>
+
+      {/* How it Works */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            How It Works
+          </h2>
+          <ol className="space-y-3 text-gray-700">
+            <li className="flex gap-3">
+              <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                1
+              </span>
+              <span>
+                <strong>Tell us about your credit profile</strong> - Your Chase
+                5/24 status, credit history, and goals
+              </span>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                2
+              </span>
+              <span>
+                <strong>Get instant recommendations</strong> - We'll create a
+                starter tree based on your profile
+              </span>
+            </li>
+            <li className="flex gap-3">
+              <span className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                3
+              </span>
+              <span>
+                <strong>Share your strategy</strong> - Get a public link to
+                share with others (no login required!)
+              </span>
+            </li>
+          </ol>
         </div>
-      </main>
+
+        {/* Disclaimers */}
+        <div className="mb-6">
+          <Disclaimers />
+        </div>
+
+        {/* Create Form */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+          <h2 className="text-2xl font-semibold text-gray-900 mb-6">
+            Create Your Tree
+          </h2>
+          <CreateTreeForm />
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center text-sm text-gray-500">
+        <p>
+          No login required • Anonymous • Free to use • Share your strategies
+        </p>
+      </footer>
     </div>
-  );
+  )
 }

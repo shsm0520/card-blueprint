@@ -1,0 +1,122 @@
+// Prisma schema for Card Tree MVP (SQLite)
+// Based on card_tree_mvp_requirements_v0_1_1.md
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// === Card (Master Data) ===
+// Managed by operators, seeded with initial data
+model Card {
+  id          String   @id @default(uuid())
+  slug        String   @unique
+  name        String
+  issuer      String   // Chase, Amex, Citi, etc.
+  cardType    String   @map("card_type") // personal, business
+  annualFee   Int      @map("annual_fee") // USD
+  rewardType  String   @map("reward_type") // cashback, UR, MR, etc.
+  tags        String   // JSON array stored as string
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Future crawling fields (v0.2+)
+  externalUrls   String?  @map("external_urls") // JSON array
+  lastCrawledAt  DateTime? @map("last_crawled_at")
+  crawlStatus    String?   @map("crawl_status") // ok, failed, blocked
+  crawlError     String?   @map("crawl_error")
+
+  // Relations
+  cardNodes       CardNode[]
+  adminReferrals  AdminReferral[]
+
+  @@map("cards")
+}
+
+// === CardTree (Anonymous Tree) ===
+// User-created strategy trees without login
+model CardTree {
+  id              String   @id // public_id (nanoid)
+  title           String
+  goal            String   // cashback, airline, hotel, status
+  chase524Status  String   @map("chase_524_status") // under, over, unknown
+  creditProfile   String   @map("credit_profile") // thin, 1to3, 3plus
+  ssnStatus       String   @default("ssn") @map("ssn_status") // ssn, itin, none
+  note            String   @default("")
+  editTokenHash   String   @map("edit_token_hash") // bcrypt hash
+  viewCount       Int      @default(0) @map("view_count")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Future crawling fields (v0.2+)
+  externalUrls   String?  @map("external_urls") // JSON array
+  lastCrawledAt  DateTime? @map("last_crawled_at")
+  crawlStatus    String?   @map("crawl_status")
+  crawlError     String?   @map("crawl_error")
+
+  // Relations
+  nodes CardNode[]
+
+  @@map("card_trees")
+}
+
+// === CardNode (Tree Node) ===
+// Individual card nodes in a tree with parent-child relationships
+model CardNode {
+  nodeId        String    @id @default(uuid()) @map("node_id")
+  treeId        String    @map("tree_id")
+  cardId        String    @map("card_id")
+  parentNodeId  String?   @map("parent_node_id") // null = root node
+  position      Int       @default(0) // for sorting/rendering
+  note          String    @default("") // user memo
+  plannedDate   DateTime? @map("planned_date") // when user plans to apply for this card
+  monthsAfterPrevious Int? @map("months_after_previous") // months to wait after previous card
+
+  // Relations
+  tree          CardTree  @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  card          Card      @relation(fields: [cardId], references: [id])
+  parent        CardNode? @relation("NodeHierarchy", fields: [parentNodeId], references: [nodeId], onDelete: Cascade)
+  children      CardNode[] @relation("NodeHierarchy")
+
+  @@map("card_nodes")
+}
+
+// === AdminReferral (Operator-only Referral Links) ===
+// Referral links managed exclusively by admins
+model AdminReferral {
+  id        String   @id @default(uuid())
+  cardId    String   @map("card_id")
+  url       String
+  label     String   @default("Apply Now") // button label
+  isActive  Boolean  @default(true) @map("is_active")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Future crawling fields (v0.2+)
+  externalUrls   String?  @map("external_urls") // JSON array
+  lastCrawledAt  DateTime? @map("last_crawled_at")
+  crawlStatus    String?   @map("crawl_status")
+  crawlError     String?   @map("crawl_error")
+
+  // Relations
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@map("admin_referrals")
+}
+
+// === AnalyticsEvent (Optional for MVP) ===
+// For future analytics tracking
+// model AnalyticsEvent {
+//   id        String   @id @default(uuid())
+//   eventType String   @map("event_type") // view_tree, click_referral
+//   treeId    String?  @map("tree_id")
+//   cardId    String?  @map("card_id")
+//   metadata  String?  // JSON string
+//   createdAt DateTime @default(now()) @map("created_at")
+//
+//   @@map("analytics_events")
+// }
