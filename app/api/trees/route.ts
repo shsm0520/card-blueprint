@@ -12,6 +12,7 @@ const createTreeSchema = z.object({
   goal: z.enum(["cashback", "airline", "hotel", "status"]).optional(),
   chase524Status: z.enum(["under", "over", "unknown"]).optional(),
   creditProfile: z.enum(["thin", "1to3", "3plus"]).optional(),
+  selectedCardSlug: z.string().optional(), // User-selected card from template
   note: z.string().max(1000).optional().default(""),
   password: z.string().min(4).max(50), // User's chosen password
 });
@@ -67,62 +68,38 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Only create nodes if template is requested
+      // Only create nodes if template is requested and card is selected
       if (
         validatedData.useTemplate &&
+        validatedData.selectedCardSlug &&
         validatedData.goal &&
         validatedData.chase524Status &&
         validatedData.creditProfile
       ) {
-        // Generate template based on user profile
-        const templateNodes = await generateTemplate({
-          chase524Status: validatedData.chase524Status,
-          creditProfile: validatedData.creditProfile,
-          goal: validatedData.goal,
-        });
-
-        // Resolve card IDs from slugs
-        const cardSlugs = templateNodes.map((n) => n.cardSlug);
-        const cards = await tx.card.findMany({
-          where: { slug: { in: cardSlugs } },
+        // Find the selected card
+        const selectedCard = await tx.card.findUnique({
+          where: { slug: validatedData.selectedCardSlug },
           select: { id: true, slug: true, countsToward524: true },
         });
-        const cardIdMap = new Map(cards.map((c) => [c.slug, c.id]));
-        const cardCountsMap = new Map(
-          cards.map((c) => [c.slug, c.countsToward524])
-        );
 
-        // Build node hierarchy
-        const nodeIdMap = new Map<string, string>(); // cardSlug -> nodeId
-
-        // Create nodes
-        for (const templateNode of templateNodes) {
-          const cardId = cardIdMap.get(templateNode.cardSlug);
-          if (!cardId) {
-            throw new Error(`Card not found: ${templateNode.cardSlug}`);
-          }
-
-          const nodeId = nanoid(16);
-          nodeIdMap.set(templateNode.cardSlug, nodeId);
-
-          // Find parent node ID
-          const parentNodeId = templateNode.parentCardSlug
-            ? nodeIdMap.get(templateNode.parentCardSlug)
-            : null;
-
-          await tx.cardNode.create({
-            data: {
-              nodeId,
-              treeId: tree.id,
-              cardId,
-              parentNodeId: parentNodeId || null,
-              position: templateNode.position,
-              note: templateNode.note || "",
-              countsToward524: cardCountsMap.get(templateNode.cardSlug) ?? true,
-              monthsAfterPrevious: templateNode.monthsAfterPrevious || null,
-            },
-          });
+        if (!selectedCard) {
+          throw new Error(`Card not found: ${validatedData.selectedCardSlug}`);
         }
+
+        // Create a single node with the selected card
+        const nodeId = nanoid(16);
+        await tx.cardNode.create({
+          data: {
+            nodeId,
+            treeId: tree.id,
+            cardId: selectedCard.id,
+            parentNodeId: null, // Root node
+            position: 0,
+            note: "Your first card - add more cards in edit mode!",
+            countsToward524: selectedCard.countsToward524,
+            monthsAfterPrevious: null,
+          },
+        });
       }
 
       return tree;

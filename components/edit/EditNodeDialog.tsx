@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,38 +8,38 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Loader2 } from 'lucide-react'
+} from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
 
 interface EditNodeDialogProps {
-  nodeId: string
-  treeId: string
-  editToken: string
-  currentNote: string
-  currentPlannedDate?: string | null
-  currentMonthsAfterPrevious?: number | null
-  currentParentNodeId?: string | null
-  cardName: string
+  nodeId: string;
+  treeId: string;
+  editToken: string;
+  currentNote: string;
+  currentPlannedDate?: string | null;
+  currentMonthsAfterPrevious?: number | null;
+  currentParentNodeId?: string | null;
+  cardName: string;
   existingNodes: Array<{
-    nodeId: string
+    nodeId: string;
     card: {
-      id: string
-      name: string
-    }
-  }>
-  onClose: () => void
-  onUpdate: () => void
+      id: string;
+      name: string;
+    };
+  }>;
+  onClose: () => void;
+  onUpdate: () => void;
 }
 
 export default function EditNodeDialog({
@@ -55,29 +55,40 @@ export default function EditNodeDialog({
   onClose,
   onUpdate,
 }: EditNodeDialogProps) {
-  const [note, setNote] = useState(currentNote)
+  const [note, setNote] = useState(currentNote);
   const [plannedDate, setPlannedDate] = useState(
-    currentPlannedDate ? currentPlannedDate.split('T')[0] : ''
-  )
+    currentPlannedDate ? currentPlannedDate.split("T")[0] : ""
+  );
   const [monthsAfterPrevious, setMonthsAfterPrevious] = useState(
-    currentMonthsAfterPrevious?.toString() || ''
-  )
+    currentMonthsAfterPrevious?.toString() || ""
+  );
   const [parentNodeId, setParentNodeId] = useState<string>(
-    currentParentNodeId || 'none'
-  )
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+    currentParentNodeId || "none"
+  );
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSave = async () => {
-    setIsLoading(true)
-    setError(null)
+    setIsLoading(true);
+    setError(null);
 
     try {
+      console.log("Saving node:", {
+        treeId,
+        nodeId,
+        note,
+        plannedDate: plannedDate || null,
+        monthsAfterPrevious: monthsAfterPrevious
+          ? parseInt(monthsAfterPrevious)
+          : null,
+        parentNodeId: parentNodeId === "none" ? null : parentNodeId,
+      });
+
       const res = await fetch(`/card/api/trees/${treeId}/nodes/${nodeId}/`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
-          'X-Edit-Token': editToken,
+          "Content-Type": "application/json",
+          "X-Edit-Token": editToken,
         },
         body: JSON.stringify({
           note,
@@ -85,23 +96,26 @@ export default function EditNodeDialog({
           monthsAfterPrevious: monthsAfterPrevious
             ? parseInt(monthsAfterPrevious)
             : null,
-          parentNodeId: parentNodeId === 'none' ? null : parentNodeId,
+          parentNodeId: parentNodeId === "none" ? null : parentNodeId,
         }),
-      })
+      });
 
-      const data = await res.json()
+      console.log("Response status:", res.status);
+      const data = await res.json();
+      console.log("Response data:", data);
 
       if (!data.success) {
-        throw new Error(data.error || 'Failed to update node')
+        throw new Error(data.error || "Failed to update node");
       }
 
-      onUpdate()
+      onUpdate();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      console.error("Save error:", err);
+      setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -139,7 +153,9 @@ export default function EditNodeDialog({
 
           {/* Planned Date */}
           <div className="space-y-2">
-            <Label htmlFor="plannedDate">Planned Application Date (Optional)</Label>
+            <Label htmlFor="plannedDate">
+              Planned Application Date (Optional)
+            </Label>
             <Input
               id="plannedDate"
               type="date"
@@ -166,7 +182,8 @@ export default function EditNodeDialog({
               placeholder="e.g., 3"
             />
             <p className="text-xs text-gray-500">
-              Recommended wait time after previous card (helps with 5/24 tracking)
+              Recommended wait time after previous card (helps with 5/24
+              tracking)
             </p>
           </div>
 
@@ -202,11 +219,11 @@ export default function EditNodeDialog({
                 Saving...
               </>
             ) : (
-              'Save Changes'
+              "Save Changes"
             )}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

@@ -7,7 +7,7 @@ interface TreePageProps {
   params: Promise<{
     id: string;
   }>;
-  searchParams?: { [key: string]: string | string[] | undefined };
+  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 // Fetch tree data
@@ -77,6 +77,7 @@ export default async function TreePage({
   searchParams,
 }: TreePageProps) {
   const { id } = await params;
+  const resolvedSearchParams = await searchParams;
   const tree = await getTree(id);
 
   if (!tree) {
@@ -132,7 +133,10 @@ export default async function TreePage({
       <Disclaimers />
 
       {/* Tree Visualization or Editor */}
-      <TreePageClient tree={tree} startInEdit={searchParams?.mode === "edit"} />
+      <TreePageClient
+        tree={tree}
+        startInEdit={resolvedSearchParams?.mode === "edit"}
+      />
 
       {/* Footer */}
       <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center text-sm text-gray-500">
