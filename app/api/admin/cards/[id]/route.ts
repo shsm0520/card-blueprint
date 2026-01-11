@@ -8,7 +8,7 @@ import { verifyAdminKey, extractAdminKey } from "@/lib/auth/admin";
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // Verify admin key
@@ -23,7 +23,7 @@ export async function DELETE(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // Verify card exists
     const card = await prisma.card.findUnique({
