@@ -20,11 +20,13 @@ ADMIN_TOKEN=your-admin-token-here
 ```
 
 **NEXTAUTH_SECRET 생성 (Linux/Mac):**
+
 ```bash
 openssl rand -base64 32
 ```
 
 **NEXTAUTH_SECRET 생성 (Windows PowerShell):**
+
 ```powershell
 [Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
 ```
@@ -53,6 +55,7 @@ http://localhost:3000
 ## 개발 환경 설정
 
 ### 사전 요구사항
+
 - Node.js 20+
 - npm 또는 yarn
 
