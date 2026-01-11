@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { verifyToken } from '@/lib/auth/token'
-import { z } from 'zod'
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { verifyToken } from "@/lib/auth/token";
+import { z } from "zod";
 
 // Validation schema
 const updateNodeSchema = z.object({
@@ -10,7 +10,7 @@ const updateNodeSchema = z.object({
   note: z.string().max(500).optional(),
   plannedDate: z.string().optional().nullable(),
   monthsAfterPrevious: z.number().int().min(0).max(60).optional().nullable(),
-})
+});
 
 /**
  * Verify edit token for tree
@@ -20,24 +20,24 @@ async function verifyTreeEditToken(
   editToken: string | null
 ): Promise<{ authorized: boolean; error?: string }> {
   if (!editToken) {
-    return { authorized: false, error: 'Edit token required' }
+    return { authorized: false, error: "Edit token required" };
   }
 
   const tree = await prisma.cardTree.findUnique({
     where: { id: treeId },
     select: { editTokenHash: true },
-  })
+  });
 
   if (!tree) {
-    return { authorized: false, error: 'Tree not found' }
+    return { authorized: false, error: "Tree not found" };
   }
 
-  const isValid = await verifyToken(editToken, tree.editTokenHash)
+  const isValid = await verifyToken(editToken, tree.editTokenHash);
   if (!isValid) {
-    return { authorized: false, error: 'Invalid edit token' }
+    return { authorized: false, error: "Invalid edit token" };
   }
 
-  return { authorized: true }
+  return { authorized: true };
 }
 
 /**
@@ -49,11 +49,11 @@ export async function PUT(
   { params }: { params: Promise<{ id: string; node_id: string }> }
 ) {
   try {
-    const { id: treeId, node_id: nodeId } = await params
+    const { id: treeId, node_id: nodeId } = await params;
 
     // Verify edit token
-    const editToken = request.headers.get('x-edit-token')
-    const authResult = await verifyTreeEditToken(treeId, editToken)
+    const editToken = request.headers.get("x-edit-token");
+    const authResult = await verifyTreeEditToken(treeId, editToken);
 
     if (!authResult.authorized) {
       return NextResponse.json(
@@ -61,8 +61,8 @@ export async function PUT(
           success: false,
           error: authResult.error,
         },
-        { status: authResult.error === 'Tree not found' ? 404 : 403 }
-      )
+        { status: authResult.error === "Tree not found" ? 404 : 403 }
+      );
     }
 
     // Verify node exists and belongs to tree
@@ -71,21 +71,21 @@ export async function PUT(
         nodeId,
         treeId,
       },
-    })
+    });
 
     if (!existingNode) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Node not found',
+          error: "Node not found",
         },
         { status: 404 }
-      )
+      );
     }
 
     // Parse and validate request body
-    const body = await request.json()
-    const validatedData = updateNodeSchema.parse(body)
+    const body = await request.json();
+    const validatedData = updateNodeSchema.parse(body);
 
     // Verify parent node exists if specified
     if (validatedData.parentNodeId !== undefined) {
@@ -93,10 +93,10 @@ export async function PUT(
         return NextResponse.json(
           {
             success: false,
-            error: 'Node cannot be its own parent',
+            error: "Node cannot be its own parent",
           },
           { status: 400 }
-        )
+        );
       }
 
       if (validatedData.parentNodeId) {
@@ -105,16 +105,16 @@ export async function PUT(
             nodeId: validatedData.parentNodeId,
             treeId,
           },
-        })
+        });
 
         if (!parentNode) {
           return NextResponse.json(
             {
               success: false,
-              error: 'Parent node not found',
+              error: "Parent node not found",
             },
             { status: 400 }
-          )
+          );
         }
       }
     }
@@ -135,7 +135,9 @@ export async function PUT(
           note: validatedData.note,
         }),
         ...(validatedData.plannedDate !== undefined && {
-          plannedDate: validatedData.plannedDate ? new Date(validatedData.plannedDate) : null,
+          plannedDate: validatedData.plannedDate
+            ? new Date(validatedData.plannedDate)
+            : null,
         }),
         ...(validatedData.monthsAfterPrevious !== undefined && {
           monthsAfterPrevious: validatedData.monthsAfterPrevious,
@@ -150,12 +152,11 @@ export async function PUT(
             issuer: true,
             cardType: true,
             annualFee: true,
-            rewardType: true,
             tags: true,
           },
         },
       },
-    })
+    });
 
     // Parse tags
     const nodeWithParsedTags = {
@@ -164,33 +165,33 @@ export async function PUT(
         ...updatedNode.card,
         tags: JSON.parse(updatedNode.card.tags),
       },
-    }
+    };
 
     return NextResponse.json({
       success: true,
       data: nodeWithParsedTags,
-    })
+    });
   } catch (error) {
-    console.error('PUT /api/trees/[id]/nodes/[node_id] error:', error)
+    console.error("PUT /api/trees/[id]/nodes/[node_id] error:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Invalid request data',
+          error: "Invalid request data",
           details: error.issues,
         },
         { status: 400 }
-      )
+      );
     }
 
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to update node',
+        error: "Failed to update node",
       },
       { status: 500 }
-    )
+    );
   }
 }
 
@@ -204,11 +205,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; node_id: string }> }
 ) {
   try {
-    const { id: treeId, node_id: nodeId } = await params
+    const { id: treeId, node_id: nodeId } = await params;
 
     // Verify edit token
-    const editToken = request.headers.get('x-edit-token')
-    const authResult = await verifyTreeEditToken(treeId, editToken)
+    const editToken = request.headers.get("x-edit-token");
+    const authResult = await verifyTreeEditToken(treeId, editToken);
 
     if (!authResult.authorized) {
       return NextResponse.json(
@@ -216,8 +217,8 @@ export async function DELETE(
           success: false,
           error: authResult.error,
         },
-        { status: authResult.error === 'Tree not found' ? 404 : 403 }
-      )
+        { status: authResult.error === "Tree not found" ? 404 : 403 }
+      );
     }
 
     // Verify node exists and belongs to tree
@@ -226,16 +227,16 @@ export async function DELETE(
         nodeId,
         treeId,
       },
-    })
+    });
 
     if (!existingNode) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Node not found',
+          error: "Node not found",
         },
         { status: 404 }
-      )
+      );
     }
 
     // Delete node (will cascade to children)
@@ -243,20 +244,20 @@ export async function DELETE(
       where: {
         nodeId,
       },
-    })
+    });
 
     return NextResponse.json({
       success: true,
-      message: 'Node deleted successfully',
-    })
+      message: "Node deleted successfully",
+    });
   } catch (error) {
-    console.error('DELETE /api/trees/[id]/nodes/[node_id] error:', error)
+    console.error("DELETE /api/trees/[id]/nodes/[node_id] error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to delete node',
+        error: "Failed to delete node",
       },
       { status: 500 }
-    )
+    );
   }
 }

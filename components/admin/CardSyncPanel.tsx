@@ -12,7 +12,6 @@ interface Card {
   issuer: string;
   cardType: string;
   annualFee: number;
-  rewardType: string;
   tags: string[];
 }
 
@@ -204,7 +203,6 @@ export default function CardSyncPanel({ adminKey }: CardSyncPanelProps) {
                   <th className="py-2 pr-3">Issuer</th>
                   <th className="py-2 pr-3">Type</th>
                   <th className="py-2 pr-3">Annual Fee</th>
-                  <th className="py-2 pr-3">Rewards</th>
                   <th className="py-2 pr-3">Tags</th>
                   <th className="py-2 pr-3 text-center">Action</th>
                 </tr>
@@ -219,9 +217,6 @@ export default function CardSyncPanel({ adminKey }: CardSyncPanelProps) {
                     <td className="py-2 pr-3 text-gray-700">{card.cardType}</td>
                     <td className="py-2 pr-3 text-gray-700">
                       ${card.annualFee}
-                    </td>
-                    <td className="py-2 pr-3 text-gray-700">
-                      {card.rewardType}
                     </td>
                     <td className="py-2 pr-3 flex flex-wrap gap-1">
                       {card.tags?.length ? (

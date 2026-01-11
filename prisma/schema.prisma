@@ -19,8 +19,7 @@ model Card {
   issuer      String   // Chase, Amex, Citi, etc.
   cardType    String   @map("card_type") // personal, business
   annualFee   Int      @map("annual_fee") // USD
-  rewardType  String   @map("reward_type") // cashback, UR, MR, etc.
-  tags        String   // JSON array stored as string
+  tags        String   // JSON array stored as string (includes reward type)
   isActive    Boolean  @default(true) @map("is_active")
   countsToward524 Boolean @default(true) @map("counts_toward_524") // business cards typically don't count
   createdAt   DateTime @default(now()) @map("created_at")

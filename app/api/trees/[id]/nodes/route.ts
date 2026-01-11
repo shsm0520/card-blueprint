@@ -223,7 +223,6 @@ export async function POST(
             issuer: true,
             cardType: true,
             annualFee: true,
-            rewardType: true,
             tags: true,
             countsToward524: true,
           },
