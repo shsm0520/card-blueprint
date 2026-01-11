@@ -82,7 +82,7 @@ export default function CardSyncPanel({ adminKey }: CardSyncPanelProps) {
     setDeletingId(cardId);
     setError(null);
     try {
-      const res = await fetch(`/card/api/dashboard/cards/${cardId}`, {
+      const res = await fetch(`/card/api/dashboard/cards/${cardId}/`, {
         method: "DELETE",
         headers: { "X-Admin-Key": adminKey },
       });
