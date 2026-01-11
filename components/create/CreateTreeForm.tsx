@@ -24,7 +24,7 @@ interface TemplatePreview {
     name: string;
     issuer: string;
     annualFee: number;
-    rewardType: string;
+    tags: string[];
   };
   note?: string;
   monthsAfterPrevious?: number;
@@ -330,18 +330,23 @@ export default function CreateTreeForm() {
                           {item.card.issuer}
                         </p>
                       </div>
-                      <div className="flex flex-col items-end gap-1">
-                        <Badge
-                          variant="secondary"
-                          className="text-xs whitespace-nowrap"
-                        >
-                          {item.card.rewardType}
-                        </Badge>
-                        <span className="text-xs text-gray-600 whitespace-nowrap">
+                      <div className="text-right">
+                        <span className="text-xs text-gray-600 whitespace-nowrap block mb-1">
                           {item.card.annualFee === 0
                             ? "No Fee"
                             : `$${item.card.annualFee}`}
                         </span>
+                        <div className="flex flex-wrap gap-1 justify-end">
+                          {item.card.tags?.map((tag, i) => (
+                            <Badge
+                              key={i}
+                              variant="secondary"
+                              className="text-xs"
+                            >
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
                     </div>
                     {item.note && (

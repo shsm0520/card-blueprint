@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
         name: true,
         issuer: true,
         annualFee: true,
-        rewardType: true,
+        tags: true,
       },
     });
 
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
             name: card.name,
             issuer: card.issuer,
             annualFee: card.annualFee,
-            rewardType: card.rewardType,
+            tags: JSON.parse(card.tags),
           },
           note: node.note,
           monthsAfterPrevious: node.monthsAfterPrevious,
