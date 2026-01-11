@@ -84,7 +84,7 @@ export default function EditNodeDialog({
         parentNodeId: parentNodeId === "none" ? null : parentNodeId,
       });
 
-      const res = await fetch(`/card/api/trees/${treeId}/nodes/${nodeId}/`, {
+      const res = await fetch(`/card/api/trees/${treeId}/nodes/${nodeId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

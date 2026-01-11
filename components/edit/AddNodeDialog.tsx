@@ -151,7 +151,7 @@ export default function AddNodeDialog({
     setError(null);
 
     try {
-      const res = await fetch(`/card/api/trees/${treeId}/nodes/`, {
+      const res = await fetch(`/card/api/trees/${treeId}/nodes`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

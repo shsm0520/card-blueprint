@@ -57,7 +57,7 @@ function EditableCardNode({ data, id }: EditableCardNodeProps) {
     setIsDeleting(true)
 
     try {
-      const res = await fetch(`/card/api/trees/${treeId}/nodes/${id}/`, {
+      const res = await fetch(`/card/api/trees/${treeId}/nodes/${id}`, {
         method: 'DELETE',
         headers: {
           'X-Edit-Token': editToken,
