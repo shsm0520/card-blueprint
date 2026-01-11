@@ -1,5 +1,4 @@
 import { load } from "cheerio";
-import type { CheerioAPI, Element } from "cheerio";
 
 const TARGET_URL =
   "https://creditcards.chase.com/all-credit-cards?CELL=6PK0&jp_ltg=chsecate_allcards";
@@ -40,7 +39,7 @@ export async function crawlChaseAllCards(): Promise<
   const seen = new Set<string>();
   const cards: (ScrapedCard & { slug: string })[] = [];
 
-  $("a").each((index: number, el: Element) => {
+  $("a").each((index: number, el: any) => {
     const href = $(el).attr("href") || "";
     let text = $(el).text().trim();
     if (!href || !text) return;
