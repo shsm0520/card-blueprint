@@ -6,6 +6,9 @@ const TARGET_URL =
 export type ScrapedCard = {
   name: string;
   href: string;
+  annualFee?: number;
+  rewardType?: string;
+  benefits?: string[];
 };
 
 function slugify(input: string): string {
@@ -13,6 +16,121 @@ function slugify(input: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+async function extractCardDetails(
+  cardHref: string,
+  cardName: string
+): Promise<{
+  annualFee?: number;
+  rewardType?: string;
+  benefits?: string[];
+}> {
+  try {
+    const res = await fetch(cardHref, {
+      headers: {
+        "user-agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        accept: "text/html,application/xhtml+xml",
+      },
+      cache: "no-store",
+    });
+
+    if (!res.ok) return {};
+
+    const html = await res.text();
+    const $ = load(html);
+
+    // Extract Annual Fee as number
+    let annualFee: number | undefined;
+
+    // Look for "ANNUAL FEE" heading and get the next content
+    $("*").each((i, el) => {
+      const text = $(el).text().trim();
+      if (text === "ANNUAL FEE" || /^annual\s+fee$/i.test(text)) {
+        const feeSection = $(el).parent().text();
+        const match = feeSection.match(/\$(\d+)|no\s+annual\s+fee/i);
+        if (match) {
+          if (match[1]) {
+            annualFee = parseInt(match[1], 10);
+          } else if (/no\s+annual\s+fee/i.test(match[0])) {
+            annualFee = 0;
+          }
+        }
+      }
+    });
+
+    // Extract Reward Type from URL path - simplified to major categories
+    let rewardType = "Points"; // default
+
+    // Extract URL segments: /category/brand/product
+    const urlMatch = cardHref.match(
+      /(?:cash-back|travel|business|secured|student)-credit-cards\/([a-z0-9\-]+)/i
+    );
+    const category = urlMatch?.[0]?.split("/")?.[0]?.toLowerCase();
+    const brand = urlMatch?.[1]?.toLowerCase();
+
+    if (category === "cash-back-credit-cards") {
+      rewardType = "Cashback";
+    } else if (category === "travel-credit-cards") {
+      // Travel category includes both miles and hotel points
+      if (
+        /southwest|united|aeroplan|avios|aircanada|british|iberia/i.test(
+          brand ?? ""
+        )
+      ) {
+        rewardType = "Miles";
+      } else {
+        rewardType = "Travel Points";
+      }
+    } else if (category === "business-credit-cards") {
+      rewardType = "Business";
+    } else if (category === "secured-credit-cards") {
+      rewardType = "Secured";
+    }
+    // } else if (category === "student-credit-cards") {
+    //   rewardType = "Student";
+    // }
+    // Extract Benefits - look for common benefit section patterns
+    const benefits: string[] = [];
+    const benefitKeywords = [
+      "Earn",
+      "Bonus",
+      "Points",
+      "Cash Back",
+      "Travel",
+      "Reward",
+      "Credit",
+      "Free",
+    ];
+
+    $("li, div[class*='benefit'], div[class*='reward'], p").each(
+      (index: number, el: any) => {
+        const text = $(el).text().trim();
+        // Filter based on keywords and length
+        if (
+          text &&
+          text.length > 10 &&
+          text.length < 150 &&
+          benefitKeywords.some((kw) => text.includes(kw))
+        ) {
+          // Avoid duplicates
+          if (!benefits.includes(text)) {
+            benefits.push(text);
+          }
+        }
+      }
+    );
+
+    return {
+      annualFee,
+      rewardType,
+      benefits: benefits.length > 0 ? benefits.slice(0, 10) : undefined,
+    };
+  } catch (error) {
+    console.error(`Error extracting details from ${cardHref}:`, error);
+    return {};
+  }
 }
 
 export async function crawlChaseAllCards(): Promise<
@@ -41,76 +159,78 @@ export async function crawlChaseAllCards(): Promise<
 
   $("a").each((index: number, el: any) => {
     const href = $(el).attr("href") || "";
-    let text = $(el).text().trim();
-    if (!href || !text) return;
 
-    // Pattern 1: Match Chase credit card product pages
-    // Accepts: /cash-back-credit-cards/..., /travel-credit-cards/..., etc.
-    // Exclude: full URLs pointing elsewhere, apply/learn pages
-    const isCardPage =
-      /\/(?:cash-back|travel|business|secured|student)-credit-cards\/[a-z0-9\-]+/i.test(
+    if (!href) return;
+
+    // Pattern 1: Only match individual product pages
+    // /cash-back-credit-cards/{name}/{product} or /travel-credit-cards/{name}/{product}
+    // This ensures we skip category pages like /cash-back-credit-cards/freedom (brands page)
+    const isIndividualCard =
+      /(?:cash-back|travel|business|secured|student)-credit-cards\/[a-z0-9\-]+\/[a-z0-9\-]+/i.test(
         href
       );
+
+    if (!isIndividualCard) return;
+
+    // Pattern 2: Skip external and apply pages
     const isExternal =
       href.startsWith("http") && !href.includes("creditcards.chase.com");
-    const isApplyPage = /application|oao|secure/i.test(href);
+    const isApplyPage = /application|oao|secure\.chase/i.test(href);
 
-    if (!isCardPage || isExternal || isApplyPage) return;
+    if (isExternal || isApplyPage) return;
 
-    // Pattern 2: Normalize card name
-    const name = text
-      .replace(/\s*opens(?:\s+\w+)*\s+in\s+a\s+new\s+window\s*/gi, "")
-      .replace(/\s*\[new\]\s*/gi, "")
-      .replace(/\s*®\s*/g, "")
-      .replace(/\s*†\s*/g, "")
-      .replace(/\s*<sup>.*?<\/sup>\s*/g, "")
-      .replace(/\s+/g, " ")
+    // Pattern 3: Extract text and clean it
+    let text = $(el).text().trim();
+
+    // Normalize whitespace first
+    text = text.replace(/\n[\s\n]*/g, " ").replace(/\s+/g, " ");
+
+    // Skip if starts with "See details" (these are secondary click targets)
+    if (/^see details/i.test(text)) return;
+
+    // Extract card name - split on (number) count or action keywords
+    const cardNameMatch = text
+      .split(/\s*\(\d+\)|links?\s+to|opens|see details/i)[0]
       .trim();
+    text = cardNameMatch;
 
-    // Pattern 3: Real card names are meaningful
-    // Minimum 5 chars, doesn't start with numbers, remove extra tokens
-    if (!name || name.length < 5 || /^\d/.test(name)) return;
-    if (
-      name.includes("Links to") ||
-      name.includes("Opens") ||
-      name.includes("Link")
-    )
-      return;
+    // Clean up special characters
+    text = text.replace(/\s*®\s*/g, "®").trim();
 
-    // Pattern 4: Exclude known non-card pages
-    const lowerName = name.toLowerCase();
-    const exclusions = [
-      "compare",
-      "faq",
-      "glossary",
-      "education",
-      "journey",
-      "agreement",
-      "terms",
-      "score",
-      "rewards",
-      "apply",
-      "learn",
-      "see all",
-      "see details",
-      "pricing",
-    ];
-    if (exclusions.some((ex) => lowerName.includes(ex))) return;
+    if (!text || text.length < 3) return;
 
-    const slug = slugify(name);
+    // Pattern 4: Exclude category/brand pages
+    if (/\(\d+\)|brands?\s+page|category\s+page/i.test(text)) return;
+
+    // Pattern 5: Real product pages must contain "credit card"
+    if (!/credit\s+card/i.test(text)) return;
+
+    const slug = slugify(text);
     if (seen.has(slug)) return;
     seen.add(slug);
 
-    // Normalize URL - remove query params if we're building absolute URL
+    // Normalize URL
     let absoluteHref = href;
     if (!href.startsWith("http")) {
       absoluteHref = `https://creditcards.chase.com${href}`;
     }
-    // Remove query params to get clean product URL
     absoluteHref = absoluteHref.split("?")[0];
 
-    cards.push({ name, href: absoluteHref, slug });
+    cards.push({ name: text, href: absoluteHref, slug });
   });
 
-  return cards;
+  // Fetch detail information for each card
+  const cardsWithDetails = await Promise.all(
+    cards.map(async (card) => {
+      const details = await extractCardDetails(card.href, card.name);
+      return {
+        ...card,
+        annualFee: details.annualFee,
+        rewardType: details.rewardType,
+        benefits: details.benefits,
+      };
+    })
+  );
+
+  return cardsWithDetails;
 }
