@@ -42,8 +42,8 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"
 
-# Use dumb-init to handle signals
-ENTRYPOINT ["/usr/sbin/dumb-init", "--"]
+# Use dumb-init to handle signals (alpine installs it to /usr/bin)
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 
 # Start application
 CMD ["npm", "start"]
