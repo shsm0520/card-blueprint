@@ -8,12 +8,16 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Lock, AlertCircle } from "lucide-react";
 import ReferralManager from "./ReferralManager";
 import CardSyncPanel from "./CardSyncPanel";
+import TreeManager from "./TreeManager";
 
 export default function AdminPanel() {
   const [adminKey, setAdminKey] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [activeTab, setActiveTab] = useState<"cards" | "referrals" | "trees">(
+    "cards"
+  );
 
   // Try to load saved admin key from sessionStorage
   useEffect(() => {
@@ -127,17 +131,37 @@ export default function AdminPanel() {
 
   return (
     <div>
-      {/* Logout Button */}
-      <div className="flex justify-end mb-6">
+      {/* Top Bar */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex gap-2">
+          <Button
+            variant={activeTab === "cards" ? "default" : "outline"}
+            onClick={() => setActiveTab("cards")}
+          >
+            Cards
+          </Button>
+          <Button
+            variant={activeTab === "referrals" ? "default" : "outline"}
+            onClick={() => setActiveTab("referrals")}
+          >
+            Referrals
+          </Button>
+          <Button
+            variant={activeTab === "trees" ? "default" : "outline"}
+            onClick={() => setActiveTab("trees")}
+          >
+            Trees
+          </Button>
+        </div>
+
         <Button variant="outline" onClick={handleLogout}>
           Logout
         </Button>
       </div>
 
-      <div className="space-y-8">
-        <CardSyncPanel adminKey={adminKey} />
-        <ReferralManager adminKey={adminKey} />
-      </div>
+      {activeTab === "cards" && <CardSyncPanel adminKey={adminKey} />}
+      {activeTab === "referrals" && <ReferralManager adminKey={adminKey} />}
+      {activeTab === "trees" && <TreeManager adminKey={adminKey} />}
     </div>
   );
 }

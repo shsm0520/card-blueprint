@@ -1,71 +1,54 @@
-'use client'
+"use client";
 
-import { useMemo } from 'react'
-import { DollarSign, Gift, TrendingUp, Calendar, AlertTriangle } from 'lucide-react'
+import { useMemo } from "react";
+import {
+  DollarSign,
+  Gift,
+  TrendingUp,
+  Calendar,
+  AlertTriangle,
+} from "lucide-react";
 
 interface TreeSummaryProps {
   nodes: Array<{
     card: {
-      name: string
-      issuer: string
-      annualFee: number
-      rewardType: string
-    }
-    plannedDate?: string | null
-    monthsAfterPrevious?: number | null
-  }>
+      name: string;
+      issuer: string;
+      annualFee: number;
+      rewardType: string;
+    };
+    plannedDate?: string | null;
+    monthsAfterPrevious?: number | null;
+    countsToward524?: boolean;
+  }>;
 }
 
 export default function TreeSummary({ nodes }: TreeSummaryProps) {
   const stats = useMemo(() => {
-    const totalAnnualFee = nodes.reduce((sum, node) => sum + node.card.annualFee, 0)
+    const totalAnnualFee = nodes.reduce(
+      (sum, node) => sum + node.card.annualFee,
+      0
+    );
 
     // Count reward types
-    const rewardTypeCounts: Record<string, number> = {}
+    const rewardTypeCounts: Record<string, number> = {};
     nodes.forEach((node) => {
-      const type = node.card.rewardType
-      rewardTypeCounts[type] = (rewardTypeCounts[type] || 0) + 1
-    })
+      const type = node.card.rewardType;
+      rewardTypeCounts[type] = (rewardTypeCounts[type] || 0) + 1;
+    });
 
     // Count issuers
-    const issuerCounts: Record<string, number> = {}
+    const issuerCounts: Record<string, number> = {};
     nodes.forEach((node) => {
-      const issuer = node.card.issuer
-      issuerCounts[issuer] = (issuerCounts[issuer] || 0) + 1
-    })
+      const issuer = node.card.issuer;
+      issuerCounts[issuer] = (issuerCounts[issuer] || 0) + 1;
+    });
 
-    // 5/24 tracking - cards with planned dates in the last 24 months from today
-    const today = new Date()
-    const twentyFourMonthsAgo = new Date(today)
-    twentyFourMonthsAgo.setMonth(today.getMonth() - 24)
-
-    const cardsLast24Months = nodes.filter((node) => {
-      if (!node.plannedDate) return false
-      const plannedDate = new Date(node.plannedDate)
-      return plannedDate >= twentyFourMonthsAgo && plannedDate <= today
-    }).length
-
-    // Find the latest planned date to calculate 5/24 from that point
-    const latestPlannedDate = nodes.reduce((latest, node) => {
-      if (!node.plannedDate) return latest
-      const plannedDate = new Date(node.plannedDate)
-      return !latest || plannedDate > latest ? plannedDate : latest
-    }, null as Date | null)
-
-    let cardsIn24MonthsFromLatest = 0
-    if (latestPlannedDate) {
-      const twentyFourMonthsBeforeLatest = new Date(latestPlannedDate)
-      twentyFourMonthsBeforeLatest.setMonth(latestPlannedDate.getMonth() - 24)
-
-      cardsIn24MonthsFromLatest = nodes.filter((node) => {
-        if (!node.plannedDate) return false
-        const plannedDate = new Date(node.plannedDate)
-        return plannedDate >= twentyFourMonthsBeforeLatest && plannedDate <= latestPlannedDate
-      }).length
-    }
-
-    const chase524Count = Math.max(cardsLast24Months, cardsIn24MonthsFromLatest)
-    const chase524Status = chase524Count >= 5 ? 'over' : 'under'
+    // 5/24 tracking - count cards that count toward 5/24
+    const chase524Count = nodes.filter(
+      (node) => node.countsToward524 !== false
+    ).length;
+    const chase524Status = chase524Count >= 5 ? "over" : "under";
 
     return {
       totalCards: nodes.length,
@@ -74,8 +57,8 @@ export default function TreeSummary({ nodes }: TreeSummaryProps) {
       issuerCounts,
       chase524Count,
       chase524Status,
-    }
-  }, [nodes])
+    };
+  }, [nodes]);
 
   return (
     <div className="w-80 bg-white border-l border-gray-200 p-6 space-y-6 overflow-y-auto">
@@ -89,7 +72,9 @@ export default function TreeSummary({ nodes }: TreeSummaryProps) {
           </div>
           <div>
             <p className="text-sm text-gray-600">Total Cards</p>
-            <p className="text-2xl font-bold text-gray-900">{stats.totalCards}</p>
+            <p className="text-2xl font-bold text-gray-900">
+              {stats.totalCards}
+            </p>
           </div>
         </div>
       </div>
@@ -105,26 +90,26 @@ export default function TreeSummary({ nodes }: TreeSummaryProps) {
             <p className="text-2xl font-bold text-gray-900">
               ${stats.totalAnnualFee.toLocaleString()}
             </p>
-            <p className="text-xs text-gray-500 mt-1">
-              per year
-            </p>
+            <p className="text-xs text-gray-500 mt-1">per year</p>
           </div>
         </div>
       </div>
 
       {/* Chase 5/24 Status */}
-      <div className={`p-4 border rounded-lg ${
-        stats.chase524Status === 'over'
-          ? 'bg-red-50 border-red-200'
-          : 'bg-green-50 border-green-200'
-      }`}>
+      <div
+        className={`p-4 border rounded-lg ${
+          stats.chase524Status === "over"
+            ? "bg-red-50 border-red-200"
+            : "bg-green-50 border-green-200"
+        }`}
+      >
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg ${
-            stats.chase524Status === 'over'
-              ? 'bg-red-600'
-              : 'bg-green-600'
-          }`}>
-            {stats.chase524Status === 'over' ? (
+          <div
+            className={`p-2 rounded-lg ${
+              stats.chase524Status === "over" ? "bg-red-600" : "bg-green-600"
+            }`}
+          >
+            {stats.chase524Status === "over" ? (
               <AlertTriangle className="h-5 w-5 text-white" />
             ) : (
               <Calendar className="h-5 w-5 text-white" />
@@ -136,9 +121,9 @@ export default function TreeSummary({ nodes }: TreeSummaryProps) {
               {stats.chase524Count}/5
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              {stats.chase524Status === 'over'
-                ? 'At or over 5/24 limit'
-                : 'Under 5/24 limit'}
+              {stats.chase524Status === "over"
+                ? "At or over 5/24 limit"
+                : "Under 5/24 limit"}
             </p>
           </div>
         </div>
@@ -158,7 +143,7 @@ export default function TreeSummary({ nodes }: TreeSummaryProps) {
             >
               <span className="text-sm text-gray-700 capitalize">{type}</span>
               <span className="text-sm font-semibold text-gray-900">
-                {count} {count === 1 ? 'card' : 'cards'}
+                {count} {count === 1 ? "card" : "cards"}
               </span>
             </div>
           ))}
@@ -191,5 +176,5 @@ export default function TreeSummary({ nodes }: TreeSummaryProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
+import { useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -11,76 +11,78 @@ import {
   Position,
   useNodesState,
   useEdgesState,
-} from '@xyflow/react'
-import '@xyflow/react/dist/style.css'
-import EditableCardNode from './EditableCardNode'
-import TreeMetadataEditor from './TreeMetadataEditor'
-import AddNodeDialog from './AddNodeDialog'
-import TreeSummary from '../tree/TreeSummary'
-import { Button } from '@/components/ui/button'
-import { Plus, Save } from 'lucide-react'
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import EditableCardNode from "./EditableCardNode";
+import TreeMetadataEditor from "./TreeMetadataEditor";
+import AddNodeDialog from "./AddNodeDialog";
+import TreeSummary from "../tree/TreeSummary";
+import { Button } from "@/components/ui/button";
+import { Plus, Save } from "lucide-react";
 
 interface TreeData {
-  id: string
-  title: string
-  goal: string
-  chase524Status: string
-  creditProfile: string
-  note: string
-  viewCount: number
-  createdAt: string
-  updatedAt: string
+  id: string;
+  title: string;
+  goal: string;
+  chase524Status: string;
+  creditProfile: string;
+  note: string;
+  viewCount: number;
+  createdAt: string;
+  updatedAt: string;
   nodes: Array<{
-    nodeId: string
-    cardId: string
-    parentNodeId: string | null
-    position: number
-    note: string
-    plannedDate?: string | null
-    monthsAfterPrevious?: number | null
+    nodeId: string;
+    cardId: string;
+    parentNodeId: string | null;
+    position: number;
+    note: string;
+    plannedDate?: string | null;
+    monthsAfterPrevious?: number | null;
+    countsToward524?: boolean;
     card: {
-      id: string
-      slug: string
-      name: string
-      issuer: string
-      cardType: string
-      annualFee: number
-      rewardType: string
-      tags: string[]
-    }
-  }>
+      id: string;
+      slug: string;
+      name: string;
+      issuer: string;
+      cardType: string;
+      annualFee: number;
+      rewardType: string;
+      tags: string[];
+      countsToward524?: boolean;
+    };
+  }>;
 }
 
 interface TreeEditorProps {
-  tree: TreeData
-  editToken: string
-  onUpdate: () => void
+  tree: TreeData;
+  editToken: string;
+  onUpdate: () => void;
 }
 
 const nodeTypes: NodeTypes = {
   editableCard: EditableCardNode,
-}
+};
 
 // Build layout (same as TreeViewer)
 // Left-to-right layout with vertical spacing for siblings
-function buildLayout(nodes: TreeData['nodes']) {
-  const HORIZONTAL_SPACING = 400 // Left to right spacing
-  const VERTICAL_SPACING = 250   // Vertical spacing between siblings
+function buildLayout(nodes: TreeData["nodes"]) {
+  const HORIZONTAL_SPACING = 400; // Left to right spacing
+  const VERTICAL_SPACING = 250; // Vertical spacing between siblings
 
-  const childrenMap = new Map<string | null, typeof nodes>()
+  const childrenMap = new Map<string | null, typeof nodes>();
   nodes.forEach((node) => {
-    const parentId = node.parentNodeId
+    const parentId = node.parentNodeId;
     if (!childrenMap.has(parentId)) {
-      childrenMap.set(parentId, [])
+      childrenMap.set(parentId, []);
     }
-    childrenMap.get(parentId)!.push(node)
-  })
+    childrenMap.get(parentId)!.push(node);
+  });
 
   childrenMap.forEach((children) => {
-    children.sort((a, b) => a.position - b.position)
-  })
+    children.sort((a, b) => a.position - b.position);
+  });
 
-  const positions = new Map<string, { x: number; y: number }>()
+  const positions = new Map<string, { x: number; y: number }>();
 
   // Recursive layout - returns the bottom y position
   function layoutNode(
@@ -88,19 +90,19 @@ function buildLayout(nodes: TreeData['nodes']) {
     depth: number,
     startY: number
   ): number {
-    const children = childrenMap.get(nodeId) || []
+    const children = childrenMap.get(nodeId) || [];
 
     if (children.length === 0) {
-      return startY
+      return startY;
     }
 
-    let currentY = startY
-    const childPositions: Array<{ nodeId: string; y: number }> = []
+    let currentY = startY;
+    const childPositions: Array<{ nodeId: string; y: number }> = [];
 
     for (const child of children) {
-      const childY = layoutNode(child.nodeId, depth + 1, currentY)
-      childPositions.push({ nodeId: child.nodeId, y: currentY })
-      currentY = childY + VERTICAL_SPACING
+      const childY = layoutNode(child.nodeId, depth + 1, currentY);
+      childPositions.push({ nodeId: child.nodeId, y: currentY });
+      currentY = childY + VERTICAL_SPACING;
     }
 
     // Position children at their depth level (left to right)
@@ -108,39 +110,44 @@ function buildLayout(nodes: TreeData['nodes']) {
       positions.set(nodeId, {
         x: depth * HORIZONTAL_SPACING,
         y,
-      })
-    })
+      });
+    });
 
     // Return the bottommost y position
-    return currentY - VERTICAL_SPACING
+    return currentY - VERTICAL_SPACING;
   }
 
-  const rootNodes = childrenMap.get(null) || []
-  let currentY = 0
+  const rootNodes = childrenMap.get(null) || [];
+  let currentY = 0;
   for (const root of rootNodes) {
-    const endY = layoutNode(root.nodeId, 1, currentY)  // Start at depth 1 instead of 0
+    const endY = layoutNode(root.nodeId, 1, currentY); // Start at depth 1 instead of 0
     positions.set(root.nodeId, {
-      x: 0,  // Root at x=0
+      x: 0, // Root at x=0
       y: currentY,
-    })
-    currentY = endY + VERTICAL_SPACING
+    });
+    currentY = endY + VERTICAL_SPACING;
   }
 
-  return positions
+  return positions;
 }
 
-export default function TreeEditor({ tree, editToken, onUpdate }: TreeEditorProps) {
-  const [showMetadataEditor, setShowMetadataEditor] = useState(false)
-  const [showAddNode, setShowAddNode] = useState(false)
+export default function TreeEditor({
+  tree: initialTree,
+  editToken,
+  onUpdate,
+}: TreeEditorProps) {
+  const [showMetadataEditor, setShowMetadataEditor] = useState(false);
+  const [showAddNode, setShowAddNode] = useState(false);
+  const [tree, setTree] = useState(initialTree);
 
-  const positions = buildLayout(tree.nodes)
+  const positions = buildLayout(tree.nodes);
 
   const initialNodes: Node[] = tree.nodes.map((node) => {
-    const pos = positions.get(node.nodeId) || { x: 0, y: 0 }
+    const pos = positions.get(node.nodeId) || { x: 0, y: 0 };
 
     return {
       id: node.nodeId,
-      type: 'editableCard',
+      type: "editableCard",
       position: pos,
       data: {
         card: node.card,
@@ -159,13 +166,13 @@ export default function TreeEditor({ tree, editToken, onUpdate }: TreeEditorProp
         })),
         onUpdate: () => {
           // Refetch tree data
-          fetchTreeData()
+          fetchTreeData();
         },
       },
       sourcePosition: Position.Right,
       targetPosition: Position.Left,
-    }
-  })
+    };
+  });
 
   const initialEdges: Edge[] = tree.nodes
     .filter((node) => node.parentNodeId)
@@ -173,26 +180,29 @@ export default function TreeEditor({ tree, editToken, onUpdate }: TreeEditorProp
       id: `${node.parentNodeId}-${node.nodeId}`,
       source: node.parentNodeId!,
       target: node.nodeId,
-      type: 'smoothstep',
+      type: "smoothstep",
       animated: false,
-      style: { stroke: '#3b82f6', strokeWidth: 2 },
-    }))
+      style: { stroke: "#3b82f6", strokeWidth: 2 },
+    }));
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes)
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges)
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   const fetchTreeData = async () => {
     try {
-      const res = await fetch(`/card/api/trees/${tree.id}/`)
-      const data = await res.json()
+      const res = await fetch(`/card/api/trees/${tree.id}/`);
+      const data = await res.json();
       if (data.success) {
+        // Update tree state
+        setTree(data.data);
+
         // Update nodes and edges
-        const newPositions = buildLayout(data.data.nodes)
+        const newPositions = buildLayout(data.data.nodes);
         const newNodes: Node[] = data.data.nodes.map((node: any) => {
-          const pos = newPositions.get(node.nodeId) || { x: 0, y: 0 }
+          const pos = newPositions.get(node.nodeId) || { x: 0, y: 0 };
           return {
             id: node.nodeId,
-            type: 'editableCard',
+            type: "editableCard",
             position: pos,
             data: {
               card: node.card,
@@ -213,8 +223,8 @@ export default function TreeEditor({ tree, editToken, onUpdate }: TreeEditorProp
             },
             sourcePosition: Position.Right,
             targetPosition: Position.Left,
-          }
-        })
+          };
+        });
 
         const newEdges: Edge[] = data.data.nodes
           .filter((node: any) => node.parentNodeId)
@@ -222,18 +232,18 @@ export default function TreeEditor({ tree, editToken, onUpdate }: TreeEditorProp
             id: `${node.parentNodeId}-${node.nodeId}`,
             source: node.parentNodeId!,
             target: node.nodeId,
-            type: 'smoothstep',
+            type: "smoothstep",
             animated: false,
-            style: { stroke: '#3b82f6', strokeWidth: 2 },
-          }))
+            style: { stroke: "#3b82f6", strokeWidth: 2 },
+          }));
 
-        setNodes(newNodes)
-        setEdges(newEdges)
+        setNodes(newNodes);
+        setEdges(newEdges);
       }
     } catch (error) {
-      console.error('Failed to fetch tree data:', error)
+      console.error("Failed to fetch tree data:", error);
     }
-  }
+  };
 
   return (
     <div>
@@ -297,8 +307,8 @@ export default function TreeEditor({ tree, editToken, onUpdate }: TreeEditorProp
           editToken={editToken}
           onClose={() => setShowMetadataEditor(false)}
           onUpdate={() => {
-            onUpdate()
-            setShowMetadataEditor(false)
+            onUpdate();
+            setShowMetadataEditor(false);
           }}
         />
       )}
@@ -308,14 +318,26 @@ export default function TreeEditor({ tree, editToken, onUpdate }: TreeEditorProp
         <AddNodeDialog
           treeId={tree.id}
           editToken={editToken}
-          existingNodes={tree.nodes}
+          existingNodes={tree.nodes.map((n) => ({
+            nodeId: n.nodeId,
+            cardId: n.cardId,
+            plannedDate: n.plannedDate || null,
+            countsToward524: n.countsToward524 ?? true,
+            card: {
+              id: n.card.id,
+              name: n.card.name,
+              issuer: n.card.issuer,
+              countsToward524: n.card.countsToward524 ?? true,
+            },
+          }))}
+          chase524Status={tree.chase524Status}
           onClose={() => setShowAddNode(false)}
           onAdd={() => {
-            setShowAddNode(false)
-            fetchTreeData()
+            setShowAddNode(false);
+            fetchTreeData();
           }}
         />
       )}
     </div>
-  )
+  );
 }

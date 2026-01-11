@@ -73,15 +73,20 @@ async function extractCardDetails(
     if (category === "cash-back-credit-cards") {
       rewardType = "Cashback";
     } else if (category === "travel-credit-cards") {
-      // Travel category includes both miles and hotel points
+      // Check for hotel cards first
       if (
+        /hyatt|ihg|marriott|bonvoy|hotel/i.test(brand ?? "") ||
+        /hyatt|ihg|marriott|bonvoy|hotel/i.test(cardName)
+      ) {
+        rewardType = "Hotel Points";
+      } else if (
         /southwest|united|aeroplan|avios|aircanada|british|iberia/i.test(
           brand ?? ""
         )
       ) {
         rewardType = "Miles";
       } else {
-        rewardType = "Travel Points";
+        rewardType = "Travel Points"; // Sapphire, Freedom = UR points
       }
     } else if (category === "business-credit-cards") {
       rewardType = "Business";

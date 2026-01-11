@@ -1,55 +1,56 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { CheckCircle2, Copy, ExternalLink, AlertTriangle } from 'lucide-react'
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { CheckCircle2, Copy, ExternalLink, AlertTriangle } from "lucide-react";
 
 interface TokenDisplayProps {
   tree: {
-    id: string
-    editToken: string
-    title: string
-  }
+    id: string;
+    editToken: string;
+    title: string;
+  };
 }
 
 export default function TokenDisplay({ tree }: TokenDisplayProps) {
-  const router = useRouter()
-  const [copied, setCopied] = useState(false)
-  const [tokenSaved, setTokenSaved] = useState(false)
+  const router = useRouter();
+  const [copied, setCopied] = useState(false);
+  const [tokenSaved, setTokenSaved] = useState(false);
 
   // For router.push, don't include basePath (Next.js adds it automatically)
-  const internalUrl = `/tree/${tree.id}/`
+  const internalUrl = `/tree/${tree.id}/`;
   // For sharing, include full basePath
-  const publicUrl = `/card/tree/${tree.id}/`
+  const publicUrl = `/card/tree/${tree.id}/`;
 
   // Save token to localStorage
   useEffect(() => {
     try {
-      localStorage.setItem(`tree_token_${tree.id}`, tree.editToken)
-      setTokenSaved(true)
+      localStorage.setItem(`tree_token_${tree.id}`, tree.editToken);
+      setTokenSaved(true);
     } catch (error) {
-      console.error('Failed to save token to localStorage:', error)
+      console.error("Failed to save token to localStorage:", error);
     }
-  }, [tree.id, tree.editToken])
+  }, [tree.id, tree.editToken]);
 
   const handleCopyToken = async () => {
     try {
-      await navigator.clipboard.writeText(tree.editToken)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      await navigator.clipboard.writeText(tree.editToken);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch (error) {
-      console.error('Failed to copy token:', error)
+      console.error("Failed to copy token:", error);
     }
-  }
+  };
 
   const handleViewTree = () => {
     // Wait a bit to ensure token is saved to localStorage
     setTimeout(() => {
-      router.push(internalUrl)
-    }, 100)
-  }
+      // Navigate to tree in edit mode
+      router.push(`${internalUrl}?mode=edit`);
+    }, 100);
+  };
 
   return (
     <div className="space-y-6">
@@ -83,11 +84,10 @@ export default function TokenDisplay({ tree }: TokenDisplayProps) {
         <AlertDescription>
           <div className="space-y-3">
             <div>
-              <strong className="text-amber-900">
-                Remember Your Password
-              </strong>
+              <strong className="text-amber-900">Remember Your Password</strong>
               <p className="text-sm text-amber-800 mt-1">
-                Your password allows you to edit your tree. Make sure you remember it!
+                Your password allows you to edit your tree. Make sure you
+                remember it!
               </p>
             </div>
 
@@ -101,8 +101,13 @@ export default function TokenDisplay({ tree }: TokenDisplayProps) {
 
             <div className="text-xs text-amber-700 space-y-1">
               <p>✓ Your password is saved in your browser for this device</p>
-              <p>✓ To edit from another device, you'll need to enter your password</p>
-              <p>✓ There is no password recovery - make sure you remember it!</p>
+              <p>
+                ✓ To edit from another device, you'll need to enter your
+                password
+              </p>
+              <p>
+                ✓ There is no password recovery - make sure you remember it!
+              </p>
             </div>
           </div>
         </AlertDescription>
@@ -126,7 +131,7 @@ export default function TokenDisplay({ tree }: TokenDisplayProps) {
             onClick={() => {
               navigator.clipboard.writeText(
                 `${window.location.origin}${publicUrl}`
-              )
+              );
             }}
           >
             <Copy className="h-4 w-4" />
@@ -163,5 +168,5 @@ export default function TokenDisplay({ tree }: TokenDisplayProps) {
         </ul>
       </div>
     </div>
-  )
+  );
 }

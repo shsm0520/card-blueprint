@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extractAdminKey, verifyAdminKey } from "@/lib/auth/admin";
 import { crawlChaseAllCards } from "@/lib/scraper/chase";
+import { crawlAmexAllCards } from "@/lib/scraper/amex";
 
 /**
  * POST /api/dashboard/cards/sync
- * Admin-only: crawl Chase all-credit-cards page and upsert into Card table
+ * Admin-only: crawl Chase and Amex cards and upsert into Card table
  */
 export async function POST(request: NextRequest) {
   try {
@@ -17,19 +18,65 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const cards = await crawlChaseAllCards();
+    // Get issuer query param (optional)
+    const url = new URL(request.url);
+    const issuerParam = url.searchParams.get("issuer")?.toLowerCase();
+
+    let allCards: Array<{
+      name: string;
+      href: string;
+      slug: string;
+      issuer: string;
+      annualFee?: number;
+      rewardType?: string;
+      benefits?: string[];
+    }> = [];
+
+    // Crawl Chase
+    if (!issuerParam || issuerParam === "chase") {
+      console.log("Crawling Chase cards...");
+      const chaseCards = await crawlChaseAllCards();
+      allCards.push(
+        ...chaseCards.map((card) => ({
+          ...card,
+          issuer: "Chase",
+        }))
+      );
+    }
+
+    // Crawl Amex
+    if (!issuerParam || issuerParam === "amex") {
+      console.log("Crawling Amex cards...");
+      const amexCards = await crawlAmexAllCards();
+      allCards.push(
+        ...amexCards.map((card) => ({
+          ...card,
+          slug: `amex-${card.name
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "")}`,
+          issuer: "American Express",
+        }))
+      );
+    }
 
     const results = await Promise.allSettled(
-      cards.map((card) =>
-        prisma.card.upsert({
+      allCards.map((card) => {
+        // Determine card type and 5/24 counting
+        const isBusiness = /business/i.test(card.name);
+        const cardType = isBusiness ? "business" : "personal";
+        const countsToward524 = !isBusiness; // Business cards don't count toward 5/24
+
+        return prisma.card.upsert({
           where: { slug: card.slug },
           update: {
             name: card.name,
-            issuer: "Chase",
-            cardType: "personal",
+            issuer: card.issuer,
+            cardType,
             annualFee: card.annualFee ?? 0,
             rewardType: card.rewardType ?? "unknown",
             tags: "[]",
+            countsToward524,
             externalUrls: JSON.stringify([card.href]),
             lastCrawledAt: new Date(),
             crawlStatus: "ok",
@@ -38,17 +85,18 @@ export async function POST(request: NextRequest) {
           create: {
             slug: card.slug,
             name: card.name,
-            issuer: "Chase",
-            cardType: "personal",
+            issuer: card.issuer,
+            cardType,
             annualFee: card.annualFee ?? 0,
             rewardType: card.rewardType ?? "unknown",
             tags: "[]",
+            countsToward524,
             externalUrls: JSON.stringify([card.href]),
             lastCrawledAt: new Date(),
             crawlStatus: "ok",
           },
-        })
-      )
+        });
+      })
     );
 
     const upserts = results.filter((r) => r.status === "fulfilled").length;
@@ -61,9 +109,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       summary: {
-        fetched: cards.length,
+        fetched: allCards.length,
         upserts,
         failed: failed.length,
+        byIssuer: {
+          chase: allCards.filter((c) => c.issuer === "Chase").length,
+          amex: allCards.filter((c) => c.issuer === "American Express").length,
+        },
       },
     });
   } catch (error) {

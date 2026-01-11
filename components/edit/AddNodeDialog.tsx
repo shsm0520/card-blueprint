@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,129 +8,187 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import { Loader2 } from 'lucide-react'
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
 
 interface AddNodeDialogProps {
-  treeId: string
-  editToken: string
+  treeId: string;
+  editToken: string;
   existingNodes: Array<{
-    nodeId: string
-    cardId: string
+    nodeId: string;
+    cardId: string;
+    plannedDate: string | null;
+    countsToward524: boolean;
     card: {
-      id: string
-      name: string
-    }
-  }>
-  onClose: () => void
-  onAdd: () => void
+      id: string;
+      name: string;
+      issuer: string;
+      countsToward524: boolean;
+    };
+  }>;
+  chase524Status: string;
+  onClose: () => void;
+  onAdd: () => void;
 }
 
 export default function AddNodeDialog({
   treeId,
   editToken,
   existingNodes,
+  chase524Status,
   onClose,
   onAdd,
 }: AddNodeDialogProps) {
   const [cards, setCards] = useState<
-    Array<{ id: string; name: string; issuer: string }>
-  >([])
-  const [issuers, setIssuers] = useState<string[]>([])
-  const [selectedIssuer, setSelectedIssuer] = useState<string>('')
-  const [selectedCardId, setSelectedCardId] = useState<string>('')
-  const [parentNodeId, setParentNodeId] = useState<string>('none')
-  const [note, setNote] = useState('')
-  const [plannedDate, setPlannedDate] = useState('')
-  const [monthsAfterPrevious, setMonthsAfterPrevious] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [isFetchingCards, setIsFetchingCards] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+    Array<{
+      id: string;
+      name: string;
+      issuer: string;
+      countsToward524: boolean;
+    }>
+  >([]);
+  const [issuers, setIssuers] = useState<string[]>([]);
+  const [selectedIssuer, setSelectedIssuer] = useState<string>("");
+  const [selectedCardId, setSelectedCardId] = useState<string>("");
+  const [parentNodeId, setParentNodeId] = useState<string>("none");
+  const [note, setNote] = useState("");
+  const [monthsAfterPrevious, setMonthsAfterPrevious] = useState("3");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingCards, setIsFetchingCards] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
 
   // Fetch available cards
   useEffect(() => {
     async function fetchCards() {
       try {
-        const res = await fetch('/card/api/cards/')
-        const data = await res.json()
+        const res = await fetch("/card/api/cards/");
+        const data = await res.json();
         if (data.success) {
-          setCards(data.data)
+          setCards(data.data);
           // Extract unique issuers
           const uniqueIssuers = Array.from(
             new Set(data.data.map((card: any) => card.issuer))
-          ).sort()
-          setIssuers(uniqueIssuers as string[])
+          ).sort();
+          setIssuers(uniqueIssuers as string[]);
         }
       } catch (err) {
-        console.error('Failed to fetch cards:', err)
+        console.error("Failed to fetch cards:", err);
       } finally {
-        setIsFetchingCards(false)
+        setIsFetchingCards(false);
       }
     }
 
-    fetchCards()
-  }, [])
+    fetchCards();
+  }, []);
 
   // Filter cards by selected issuer
   const filteredCards = selectedIssuer
     ? cards.filter((card) => card.issuer === selectedIssuer)
-    : []
+    : [];
 
   // Reset selected card when issuer changes
   useEffect(() => {
-    setSelectedCardId('')
-  }, [selectedIssuer])
+    setSelectedCardId("");
+    setWarning(null);
+  }, [selectedIssuer]);
+
+  // Check 5/24 status when card is selected
+  useEffect(() => {
+    if (!selectedCardId) {
+      setWarning(null);
+      return;
+    }
+
+    const selectedCard = cards.find((c) => c.id === selectedCardId);
+    if (!selectedCard) return;
+
+    // Check if tree is under 5/24
+    if (chase524Status !== "under") {
+      setWarning(null);
+      return;
+    }
+
+    // Count existing nodes that count toward 5/24
+    const nodesCountingToward524 = existingNodes.filter(
+      (node) => node.countsToward524
+    ).length;
+
+    // Warn if adding this card would exceed 5/24
+    if (selectedCard.issuer === "Chase" && nodesCountingToward524 >= 5) {
+      setWarning(
+        `⚠️ 5/24 Rule: You have ${nodesCountingToward524} cards in your strategy. Chase typically requires being under 5/24.`
+      );
+    } else if (nodesCountingToward524 >= 4) {
+      setWarning(
+        `ℹ️ You have ${nodesCountingToward524} cards. Adding this card will put you at ${
+          nodesCountingToward524 + 1
+        }/24.`
+      );
+    } else {
+      setWarning(null);
+    }
+  }, [selectedCardId, cards, existingNodes, chase524Status]);
 
   const handleAdd = async () => {
     if (!selectedCardId) {
-      setError('Please select a card')
-      return
+      setError("Please select a card");
+      return;
     }
 
-    setIsLoading(true)
-    setError(null)
+    setIsLoading(true);
+    setError(null);
 
     try {
       const res = await fetch(`/card/api/trees/${treeId}/nodes/`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'X-Edit-Token': editToken,
+          "Content-Type": "application/json",
+          "X-Edit-Token": editToken,
         },
         body: JSON.stringify({
           cardId: selectedCardId,
-          parentNodeId: parentNodeId === 'none' ? null : parentNodeId,
+          parentNodeId: parentNodeId === "none" ? null : parentNodeId,
           position: existingNodes.length,
           note,
-          plannedDate: plannedDate || null,
-          monthsAfterPrevious: monthsAfterPrevious ? parseInt(monthsAfterPrevious) : null,
+          monthsAfterPrevious: monthsAfterPrevious
+            ? parseInt(monthsAfterPrevious)
+            : null,
         }),
-      })
+      });
 
-      const data = await res.json()
+      const data = await res.json();
 
       if (!data.success) {
-        throw new Error(data.error || 'Failed to add node')
+        // Show error with warning flag if it's a 5/24 violation
+        if (data.warning) {
+          setError(
+            `${data.error}\n\nNote: You can still add this card if you want to plan for after you're over 5/24.`
+          );
+        } else {
+          throw new Error(data.error || "Failed to add node");
+        }
+        setIsLoading(false);
+        return;
       }
 
-      onAdd()
+      onAdd();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
-    } finally {
-      setIsLoading(false)
+      setError(err instanceof Error ? err.message : "Something went wrong");
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
@@ -207,24 +265,10 @@ export default function AddNodeDialog({
             </p>
           </div>
 
-          {/* Planned Date */}
-          <div className="space-y-2">
-            <Label htmlFor="plannedDate">Planned Application Date (Optional)</Label>
-            <Input
-              id="plannedDate"
-              type="date"
-              value={plannedDate}
-              onChange={(e) => setPlannedDate(e.target.value)}
-            />
-            <p className="text-xs text-gray-500">
-              When do you plan to apply for this card?
-            </p>
-          </div>
-
           {/* Months After Previous */}
           <div className="space-y-2">
             <Label htmlFor="monthsAfterPrevious">
-              Months to Wait After Previous Card (Optional)
+              Wait Time After Parent Card *
             </Label>
             <Input
               id="monthsAfterPrevious"
@@ -233,10 +277,10 @@ export default function AddNodeDialog({
               max="60"
               value={monthsAfterPrevious}
               onChange={(e) => setMonthsAfterPrevious(e.target.value)}
-              placeholder="e.g., 3"
+              placeholder="3"
             />
             <p className="text-xs text-gray-500">
-              Recommended wait time (helps with 5/24 tracking)
+              📊 Recommended: 3 months (credit score recovery: -12 pts → ±0)
             </p>
           </div>
 
@@ -248,14 +292,21 @@ export default function AddNodeDialog({
               onChange={(e) => setNote(e.target.value)}
               maxLength={500}
               rows={2}
-              placeholder="e.g., Get this card after 6 months..."
+              placeholder="e.g., Wait for sign-up bonus..."
             />
             <p className="text-xs text-gray-500">{note.length}/500</p>
           </div>
 
+          {/* Warning for 5/24 */}
+          {warning && (
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-800">
+              {warning}
+            </div>
+          )}
+
           {/* Error */}
           {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800">
+            <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-800 whitespace-pre-line">
               {error}
             </div>
           )}
@@ -272,11 +323,11 @@ export default function AddNodeDialog({
                 Adding...
               </>
             ) : (
-              'Add Card'
+              "Add Card"
             )}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

@@ -20,6 +20,10 @@ interface SyncSummary {
   fetched: number;
   upserts: number;
   failed: number;
+  byIssuer?: {
+    chase: number;
+    amex: number;
+  };
 }
 
 interface CardSyncPanelProps {
@@ -53,11 +57,14 @@ export default function CardSyncPanel({ adminKey }: CardSyncPanelProps) {
     }
   };
 
-  const handleSync = async () => {
+  const handleSync = async (issuer?: "chase" | "amex") => {
     setIsSyncing(true);
     setError(null);
     try {
-      const res = await fetch("/card/api/dashboard/cards/sync/", {
+      const url = issuer
+        ? `/card/api/dashboard/cards/sync/?issuer=${issuer}`
+        : "/card/api/dashboard/cards/sync/";
+      const res = await fetch(url, {
         method: "POST",
         headers: { "X-Admin-Key": adminKey },
       });
@@ -107,17 +114,45 @@ export default function CardSyncPanel({ adminKey }: CardSyncPanelProps) {
           </div>
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Card Sync</h2>
-            <p className="text-sm text-gray-600">Chase all-credit-cards → DB</p>
+            <p className="text-sm text-gray-600">Chase & Amex → DB</p>
           </div>
         </div>
-        <Button
-          onClick={handleSync}
-          disabled={isSyncing}
-          className="flex items-center gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
-          {isSyncing ? "Syncing..." : "Run Sync"}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => handleSync("chase")}
+            disabled={isSyncing}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isSyncing ? "animate-spin" : ""}`}
+            />
+            Chase
+          </Button>
+          <Button
+            onClick={() => handleSync("amex")}
+            disabled={isSyncing}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isSyncing ? "animate-spin" : ""}`}
+            />
+            Amex
+          </Button>
+          <Button
+            onClick={() => handleSync()}
+            disabled={isSyncing}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isSyncing ? "animate-spin" : ""}`}
+            />
+            {isSyncing ? "Syncing..." : "Sync All"}
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -131,6 +166,13 @@ export default function CardSyncPanel({ adminKey }: CardSyncPanelProps) {
           <span>Fetched: {summary.fetched}</span>
           <span>Upserts: {summary.upserts}</span>
           <span>Failed: {summary.failed}</span>
+          {summary.byIssuer && (
+            <>
+              <span className="text-gray-400">|</span>
+              <span>Chase: {summary.byIssuer.chase}</span>
+              <span>Amex: {summary.byIssuer.amex}</span>
+            </>
+          )}
         </div>
       )}
 
