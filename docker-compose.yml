@@ -1,9 +1,9 @@
 version: "3.8"
 
 services:
-  card-tree-mvp:
-    image: ghcr.io/YOUR_USERNAME/card-tree-mvp:latest
-    container_name: card-tree-mvp
+  card-blueprint:
+    image: ghcr.io/shsm0520/card-blueprint:latest
+    container_name: card-blueprint
     restart: unless-stopped
     ports:
       - "3000:3000"
@@ -11,10 +11,10 @@ services:
       NODE_ENV: production
       NEXTAUTH_URL: http://localhost:3000
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      DATABASE_URL: file:/app/data/card_tree.db
+      DATABASE_URL: file:/app/data/card_blueprint.db
       ADMIN_TOKEN: ${ADMIN_TOKEN}
     volumes:
-      - card-tree-data:/app/data
+      - card-blueprint-data:/app/data
     healthcheck:
       test:
         [
@@ -30,12 +30,12 @@ services:
       retries: 3
       start_period: 40s
     networks:
-      - card-tree-network
+      - card-blueprint-network
 
 volumes:
-  card-tree-data:
+  card-blueprint-data:
     driver: local
 
 networks:
-  card-tree-network:
+  card-blueprint-network:
     driver: bridge

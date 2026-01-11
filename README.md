@@ -7,37 +7,21 @@
 ### 1. docker-compose.yml 다운로드
 
 ```bash
-curl -O https://raw.githubusercontent.com/shsm0520/card-tree-mvp/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/shsm0520/card-blueprint/main/docker-compose.yml
 ```
 
-### 2. 환경 변수 설정
-
-`.env` 파일 생성:
-
-```env
-NEXTAUTH_SECRET=your-secret-key-here
-ADMIN_TOKEN=your-admin-token-here
-```
-
-**NEXTAUTH_SECRET 생성 (Linux/Mac):**
+### 2. 환경 변수 설정 (Linux bash 자동 생성)
 
 ```bash
-openssl rand -base64 32
-```
-
-**NEXTAUTH_SECRET 생성 (Windows PowerShell):**
-
-```powershell
-[Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+cat > .env <<EOF
+NEXTAUTH_SECRET=$(openssl rand -base64 32)
+ADMIN_TOKEN=your-admin-token-here
+EOF
 ```
 
 ### 3. 실행
 
 ```bash
-# GHCR 로그인 (처음 한 번만)
-docker login ghcr.io
-# Username: YOUR_USERNAME
-# Password: YOUR_GITHUB_TOKEN
 
 # 컨테이너 실행
 docker-compose up -d
