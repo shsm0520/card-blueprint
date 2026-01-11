@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { verifyAdminKey, extractAdminKey } from "@/lib/auth/admin";
 
 /**
- * DELETE /api/admin/cards/[id]
+ * DELETE /api/dashboard/cards/[id]
  * Delete a card by ID (admin only)
  */
 export async function DELETE(
@@ -50,7 +50,7 @@ export async function DELETE(
       message: `Card "${card.name}" deleted successfully`,
     });
   } catch (error) {
-    console.error("DELETE /api/admin/cards/[id] error:", error);
+    console.error("DELETE /api/dashboard/cards/[id] error:", error);
     return NextResponse.json(
       {
         success: false,

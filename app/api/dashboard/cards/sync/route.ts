@@ -4,7 +4,7 @@ import { extractAdminKey, verifyAdminKey } from "@/lib/auth/admin";
 import { crawlChaseAllCards } from "@/lib/scraper/chase";
 
 /**
- * POST /api/admin/cards/sync
+ * POST /api/dashboard/cards/sync
  * Admin-only: crawl Chase all-credit-cards page and upsert into Card table
  */
 export async function POST(request: NextRequest) {
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("POST /api/admin/cards/sync error:", error);
+    console.error("POST /api/dashboard/cards/sync error:", error);
     return NextResponse.json(
       { success: false, error: "Failed to sync cards" },
       { status: 500 }

@@ -42,7 +42,7 @@ export default function CardSyncPanel({ adminKey }: CardSyncPanelProps) {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch("/card/api/cards/");
+      const res = await fetch("/api/cards/");
       const data = await res.json();
       if (!data.success) throw new Error(data.error || "Failed to load cards");
       setCards(data.data);
@@ -57,7 +57,7 @@ export default function CardSyncPanel({ adminKey }: CardSyncPanelProps) {
     setIsSyncing(true);
     setError(null);
     try {
-      const res = await fetch("/card/api/admin/cards/sync/", {
+      const res = await fetch("/api/dashboard/cards/sync/", {
         method: "POST",
         headers: { "X-Admin-Key": adminKey },
       });
@@ -82,7 +82,7 @@ export default function CardSyncPanel({ adminKey }: CardSyncPanelProps) {
     setDeletingId(cardId);
     setError(null);
     try {
-      const res = await fetch(`/card/api/admin/cards/${cardId}`, {
+      const res = await fetch(`/api/dashboard/cards/${cardId}`, {
         method: "DELETE",
         headers: { "X-Admin-Key": adminKey },
       });

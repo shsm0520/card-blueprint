@@ -1,18 +1,18 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { Plus, Edit, Trash2, ExternalLink } from 'lucide-react'
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Edit, Trash2, ExternalLink } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,156 +20,156 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog'
+} from "@/components/ui/dialog";
 
 interface Referral {
-  id: string
-  cardId: string
-  url: string
-  label: string
-  isActive: boolean
+  id: string;
+  cardId: string;
+  url: string;
+  label: string;
+  isActive: boolean;
   card: {
-    id: string
-    name: string
-    issuer: string
-  }
+    id: string;
+    name: string;
+    issuer: string;
+  };
 }
 
 interface Card {
-  id: string
-  name: string
-  issuer: string
+  id: string;
+  name: string;
+  issuer: string;
 }
 
 interface ReferralManagerProps {
-  adminKey: string
+  adminKey: string;
 }
 
 export default function ReferralManager({ adminKey }: ReferralManagerProps) {
-  const [referrals, setReferrals] = useState<Referral[]>([])
-  const [cards, setCards] = useState<Card[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [showDialog, setShowDialog] = useState(false)
-  const [editingReferral, setEditingReferral] = useState<Referral | null>(null)
+  const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [cards, setCards] = useState<Card[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showDialog, setShowDialog] = useState(false);
+  const [editingReferral, setEditingReferral] = useState<Referral | null>(null);
 
   // Form state
-  const [cardId, setCardId] = useState('')
-  const [url, setUrl] = useState('')
-  const [label, setLabel] = useState('Apply Now')
-  const [isActive, setIsActive] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
+  const [cardId, setCardId] = useState("");
+  const [url, setUrl] = useState("");
+  const [label, setLabel] = useState("Apply Now");
+  const [isActive, setIsActive] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    fetchData()
-  }, [])
+    fetchData();
+  }, []);
 
   const fetchData = async () => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
       const [referralsRes, cardsRes] = await Promise.all([
-        fetch('/card/api/admin/referrals/', {
-          headers: { 'X-Admin-Key': adminKey },
+        fetch("/api/dashboard/referrals/", {
+          headers: { "X-Admin-Key": adminKey },
         }),
-        fetch('/card/api/cards/'),
-      ])
+        fetch("/card/api/cards/"),
+      ]);
 
-      const referralsData = await referralsRes.json()
-      const cardsData = await cardsRes.json()
+      const referralsData = await referralsRes.json();
+      const cardsData = await cardsRes.json();
 
       if (referralsData.success) {
-        setReferrals(referralsData.data)
+        setReferrals(referralsData.data);
       }
       if (cardsData.success) {
-        setCards(cardsData.data)
+        setCards(cardsData.data);
       }
     } catch (error) {
-      console.error('Failed to fetch data:', error)
+      console.error("Failed to fetch data:", error);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleAdd = () => {
-    setEditingReferral(null)
-    setCardId('')
-    setUrl('')
-    setLabel('Apply Now')
-    setIsActive(true)
-    setShowDialog(true)
-  }
+    setEditingReferral(null);
+    setCardId("");
+    setUrl("");
+    setLabel("Apply Now");
+    setIsActive(true);
+    setShowDialog(true);
+  };
 
   const handleEdit = (referral: Referral) => {
-    setEditingReferral(referral)
-    setCardId(referral.cardId)
-    setUrl(referral.url)
-    setLabel(referral.label)
-    setIsActive(referral.isActive)
-    setShowDialog(true)
-  }
+    setEditingReferral(referral);
+    setCardId(referral.cardId);
+    setUrl(referral.url);
+    setLabel(referral.label);
+    setIsActive(referral.isActive);
+    setShowDialog(true);
+  };
 
   const handleSave = async () => {
-    setIsSaving(true)
+    setIsSaving(true);
 
     try {
-      const body = { cardId, url, label, isActive }
+      const body = { cardId, url, label, isActive };
       const res = editingReferral
-        ? await fetch(`/card/api/admin/referrals/${editingReferral.id}/`, {
-            method: 'PUT',
+        ? await fetch(`/api/dashboard/referrals/${editingReferral.id}/`, {
+            method: "PUT",
             headers: {
-              'Content-Type': 'application/json',
-              'X-Admin-Key': adminKey,
+              "Content-Type": "application/json",
+              "X-Admin-Key": adminKey,
             },
             body: JSON.stringify(body),
           })
-        : await fetch('/card/api/admin/referrals/', {
-            method: 'POST',
+        : await fetch("/api/dashboard/referrals/", {
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
-              'X-Admin-Key': adminKey,
+              "Content-Type": "application/json",
+              "X-Admin-Key": adminKey,
             },
             body: JSON.stringify(body),
-          })
+          });
 
-      const data = await res.json()
+      const data = await res.json();
 
       if (!data.success) {
-        throw new Error(data.error || 'Failed to save referral')
+        throw new Error(data.error || "Failed to save referral");
       }
 
-      await fetchData()
-      setShowDialog(false)
+      await fetchData();
+      setShowDialog(false);
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to save')
+      alert(error instanceof Error ? error.message : "Failed to save");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this referral?')) {
-      return
+    if (!confirm("Are you sure you want to delete this referral?")) {
+      return;
     }
 
     try {
-      const res = await fetch(`/card/api/admin/referrals/${id}/`, {
-        method: 'DELETE',
-        headers: { 'X-Admin-Key': adminKey },
-      })
+      const res = await fetch(`/api/dashboard/referrals/${id}/`, {
+        method: "DELETE",
+        headers: { "X-Admin-Key": adminKey },
+      });
 
-      const data = await res.json()
+      const data = await res.json();
 
       if (!data.success) {
-        throw new Error(data.error || 'Failed to delete')
+        throw new Error(data.error || "Failed to delete");
       }
 
-      await fetchData()
+      await fetchData();
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Failed to delete')
+      alert(error instanceof Error ? error.message : "Failed to delete");
     }
-  }
+  };
 
   if (isLoading) {
-    return <div className="text-center py-8">Loading...</div>
+    return <div className="text-center py-8">Loading...</div>;
   }
 
   return (
@@ -238,15 +238,15 @@ export default function ReferralManager({ adminKey }: ReferralManagerProps) {
                       rel="noopener noreferrer"
                       className="flex items-center gap-1 hover:text-blue-600"
                     >
-                      <span className="truncate max-w-xs">
-                        {referral.url}
-                      </span>
+                      <span className="truncate max-w-xs">{referral.url}</span>
                       <ExternalLink className="h-3 w-3 flex-shrink-0" />
                     </a>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <Badge variant={referral.isActive ? 'default' : 'secondary'}>
-                      {referral.isActive ? 'Active' : 'Inactive'}
+                    <Badge
+                      variant={referral.isActive ? "default" : "secondary"}
+                    >
+                      {referral.isActive ? "Active" : "Inactive"}
                     </Badge>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -279,12 +279,12 @@ export default function ReferralManager({ adminKey }: ReferralManagerProps) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingReferral ? 'Edit Referral' : 'Add Referral'}
+              {editingReferral ? "Edit Referral" : "Add Referral"}
             </DialogTitle>
             <DialogDescription>
               {editingReferral
-                ? 'Update the referral link details'
-                : 'Create a new referral link for a card'}
+                ? "Update the referral link details"
+                : "Create a new referral link for a card"}
             </DialogDescription>
           </DialogHeader>
 
@@ -329,7 +329,7 @@ export default function ReferralManager({ adminKey }: ReferralManagerProps) {
               <Label>Status</Label>
               <Select
                 value={isActive.toString()}
-                onValueChange={(v) => setIsActive(v === 'true')}
+                onValueChange={(v) => setIsActive(v === "true")}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -347,11 +347,11 @@ export default function ReferralManager({ adminKey }: ReferralManagerProps) {
               Cancel
             </Button>
             <Button onClick={handleSave} disabled={isSaving || !cardId || !url}>
-              {isSaving ? 'Saving...' : 'Save'}
+              {isSaving ? "Saving..." : "Save"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
