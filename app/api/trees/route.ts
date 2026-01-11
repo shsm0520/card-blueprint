@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
 import { prisma } from "@/lib/prisma";
-import {
-  checkMultipleRateLimits,
-  getClientIp,
-  createRateLimitHeaders,
-} from "@/lib/ratelimit";
 import { generateTemplate, resolveCardIds } from "@/lib/templates";
 import { z } from "zod";
 
@@ -24,30 +19,10 @@ const createTreeSchema = z.object({
 /**
  * POST /api/trees
  * Create a new tree with template
- * No authentication required, but rate limited
+ * No authentication required (nginx WAF handles rate limiting)
  */
 export async function POST(request: NextRequest) {
   try {
-    // Rate limiting
-    const clientIp = getClientIp(request);
-    const rateLimitResult = checkMultipleRateLimits(
-      ["createTree", "createTreeDaily"],
-      clientIp
-    );
-
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Rate limit exceeded. Please try again later.",
-        },
-        {
-          status: 429,
-          headers: createRateLimitHeaders(rateLimitResult),
-        }
-      );
-    }
-
     // Parse and validate request body
     const body = await request.json();
     const validatedData = createTreeSchema.parse(body);
@@ -162,10 +137,7 @@ export async function POST(request: NextRequest) {
           title: result.title,
         },
       },
-      {
-        status: 201,
-        headers: createRateLimitHeaders(rateLimitResult),
-      }
+      { status: 201 }
     );
   } catch (error) {
     console.error("POST /api/trees error:", error);
