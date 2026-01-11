@@ -67,7 +67,7 @@ export default function ReferralManager({ adminKey }: ReferralManagerProps) {
     setIsLoading(true);
     try {
       const [referralsRes, cardsRes] = await Promise.all([
-        fetch("/api/dashboard/referrals/", {
+        fetch("/card/api/dashboard/referrals/", {
           headers: { "X-Admin-Key": adminKey },
         }),
         fetch("/card/api/cards/"),
@@ -113,7 +113,7 @@ export default function ReferralManager({ adminKey }: ReferralManagerProps) {
     try {
       const body = { cardId, url, label, isActive };
       const res = editingReferral
-        ? await fetch(`/api/dashboard/referrals/${editingReferral.id}/`, {
+        ? await fetch(`/card/api/dashboard/referrals/${editingReferral.id}/`, {
             method: "PUT",
             headers: {
               "Content-Type": "application/json",
@@ -121,7 +121,7 @@ export default function ReferralManager({ adminKey }: ReferralManagerProps) {
             },
             body: JSON.stringify(body),
           })
-        : await fetch("/api/dashboard/referrals/", {
+        : await fetch("/card/api/dashboard/referrals/", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -151,7 +151,7 @@ export default function ReferralManager({ adminKey }: ReferralManagerProps) {
     }
 
     try {
-      const res = await fetch(`/api/dashboard/referrals/${id}/`, {
+      const res = await fetch(`/card/api/dashboard/referrals/${id}/`, {
         method: "DELETE",
         headers: { "X-Admin-Key": adminKey },
       });

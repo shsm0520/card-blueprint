@@ -30,7 +30,7 @@ export default function AdminPanel() {
 
     try {
       // Try to fetch referrals with the key
-      const res = await fetch("/api/dashboard/referrals/", {
+      const res = await fetch("/card/api/dashboard/referrals/", {
         headers: {
           "X-Admin-Key": key,
         },
