@@ -15,7 +15,7 @@ interface TreeSummaryProps {
       name: string;
       issuer: string;
       annualFee: number;
-      rewardType: string;
+      tags: string[];
     };
     plannedDate?: string | null;
     monthsAfterPrevious?: number | null;
@@ -30,11 +30,30 @@ export default function TreeSummary({ nodes }: TreeSummaryProps) {
       0
     );
 
-    // Count reward types
+    // Count reward types from tags
     const rewardTypeCounts: Record<string, number> = {};
+    const rewardTypeKeywords = [
+      "Cashback",
+      "Travel Points",
+      "Miles",
+      "Hotel Points",
+      "MR",
+      "UR",
+    ];
+
     nodes.forEach((node) => {
-      const type = node.card.rewardType;
-      rewardTypeCounts[type] = (rewardTypeCounts[type] || 0) + 1;
+      // Find reward type tags
+      const rewardTags = node.card.tags.filter((tag) =>
+        rewardTypeKeywords.some((keyword) =>
+          tag.toLowerCase().includes(keyword.toLowerCase())
+        )
+      );
+
+      // If no reward type found, use first tag or "Other"
+      const rewardType =
+        rewardTags.length > 0 ? rewardTags[0] : node.card.tags[0] || "Other";
+
+      rewardTypeCounts[rewardType] = (rewardTypeCounts[rewardType] || 0) + 1;
     });
 
     // Count issuers
