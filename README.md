@@ -7,7 +7,7 @@
 ### 1. docker-compose.yml 다운로드
 
 ```bash
-curl -O https://raw.githubusercontent.com/YOUR_USERNAME/card-tree-mvp/main/docker-compose.yml
+curl -O https://raw.githubusercontent.com/shsm0520/card-tree-mvp/main/docker-compose.yml
 ```
 
 ### 2. 환경 변수 설정
