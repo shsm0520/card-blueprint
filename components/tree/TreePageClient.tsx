@@ -134,16 +134,26 @@ export default function TreePageClient({
       {/* Edit/View Toggle Button */}
       {!isLoading && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-col sm:flex-row justify-end gap-2">
             {isEditMode && hasEditToken ? (
-              <Button onClick={() => setIsEditMode(false)} variant="default">
+              <Button
+                onClick={() => setIsEditMode(false)}
+                variant="default"
+                className="w-full sm:w-auto"
+              >
                 <Eye className="mr-2 h-4 w-4" />
-                View Mode
+                <span className="hidden sm:inline">View Mode</span>
+                <span className="sm:hidden">View</span>
               </Button>
             ) : (
-              <Button onClick={handleEditClick} variant="outline">
+              <Button
+                onClick={handleEditClick}
+                variant="outline"
+                className="w-full sm:w-auto"
+              >
                 <Edit className="mr-2 h-4 w-4" />
-                Edit Mode
+                <span className="hidden sm:inline">Edit Mode</span>
+                <span className="sm:hidden">Edit</span>
               </Button>
             )}
             {/* Share Link button */}
@@ -156,6 +166,7 @@ export default function TreePageClient({
                 setTimeout(() => setShareCopied(false), 2000);
               }}
               title={shareCopied ? "Copied!" : "Copy shareable link"}
+              className="w-full sm:w-auto"
             >
               <Copy className="mr-2 h-4 w-4" />
               {shareCopied ? "Link Copied" : "Share Link"}

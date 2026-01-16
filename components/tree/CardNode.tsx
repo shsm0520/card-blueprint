@@ -1,60 +1,60 @@
-'use client'
+"use client";
 
-import { memo, useEffect, useState } from 'react'
-import { Handle, Position } from '@xyflow/react'
-import { CreditCard, ExternalLink } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
+import { memo, useEffect, useState } from "react";
+import { Handle, Position } from "@xyflow/react";
+import { CreditCard, ExternalLink } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface CardNodeProps {
   data: {
     card: {
-      id: string
-      slug: string
-      name: string
-      issuer: string
-      cardType: string
-      annualFee: number
-      rewardType: string
-      tags: string[]
-    }
-    note: string
-    plannedDate?: string | null
-    monthsAfterPrevious?: number | null
-    treeId: string
-  }
+      id: string;
+      slug: string;
+      name: string;
+      issuer: string;
+      cardType: string;
+      annualFee: number;
+      rewardType: string;
+      tags: string[];
+    };
+    note: string;
+    plannedDate?: string | null;
+    monthsAfterPrevious?: number | null;
+    treeId: string;
+  };
 }
 
 function CardNode({ data }: CardNodeProps) {
-  const { card, note, plannedDate, monthsAfterPrevious } = data
+  const { card, note, plannedDate, monthsAfterPrevious } = data;
   const [referrals, setReferrals] = useState<
     Array<{ id: string; url: string; label: string }>
-  >([])
-  const [loading, setLoading] = useState(true)
+  >([]);
+  const [loading, setLoading] = useState(true);
 
   // Fetch referrals for this card
   useEffect(() => {
     async function fetchReferrals() {
       try {
-        const res = await fetch(`/card/api/referrals/?card_id=${card.id}/`)
-        const data = await res.json()
+        const res = await fetch(`/card/api/referrals/?card_id=${card.id}/`);
+        const data = await res.json();
         if (data.success) {
-          setReferrals(data.data)
+          setReferrals(data.data);
         }
       } catch (error) {
-        console.error('Failed to fetch referrals:', error)
+        console.error("Failed to fetch referrals:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
 
-    fetchReferrals()
-  }, [card.id])
+    fetchReferrals();
+  }, [card.id]);
 
   return (
     <div className="relative z-10">
       <Handle type="target" position={Position.Left} className="w-3 h-3" />
 
-      <div className="w-80 bg-white border-2 border-gray-200 rounded-lg shadow-md hover:shadow-lg transition-shadow relative z-10">
+      <div className="w-72 sm:w-80 bg-white border-2 border-gray-200 rounded-lg shadow-md hover:shadow-lg transition-shadow relative z-10">
         {/* Card Header */}
         <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
           <div className="flex items-start gap-3">
@@ -77,7 +77,7 @@ function CardNode({ data }: CardNodeProps) {
             <div>
               <span className="text-gray-500">Annual Fee:</span>
               <span className="ml-2 font-semibold text-gray-900">
-                {card.annualFee === 0 ? 'No Fee' : `$${card.annualFee}`}
+                {card.annualFee === 0 ? "No Fee" : `$${card.annualFee}`}
               </span>
             </div>
             <Badge variant="secondary" className="text-xs">
@@ -152,7 +152,7 @@ function CardNode({ data }: CardNodeProps) {
 
       <Handle type="source" position={Position.Right} className="w-3 h-3" />
     </div>
-  )
+  );
 }
 
-export default memo(CardNode)
+export default memo(CardNode);

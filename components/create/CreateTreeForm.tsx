@@ -295,22 +295,22 @@ export default function CreateTreeForm() {
                 key={item.card.slug}
                 type="button"
                 onClick={() => setSelectedCardSlug(item.card.slug)}
-                className={`w-full text-left p-3 rounded-md border-2 transition-all ${
+                className={`w-full text-left p-2 sm:p-3 rounded-md border-2 transition-all ${
                   selectedCardSlug === item.card.slug
                     ? "border-blue-500 bg-blue-50 shadow-md"
                     : "border-gray-200 bg-white hover:border-blue-300"
                 }`}
               >
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-2 sm:gap-3">
                   <div
-                    className={`p-2 rounded ${
+                    className={`p-1.5 sm:p-2 rounded flex-shrink-0 ${
                       selectedCardSlug === item.card.slug
                         ? "bg-blue-500"
                         : "bg-blue-100"
                     }`}
                   >
                     <CreditCard
-                      className={`h-4 w-4 ${
+                      className={`h-3 w-3 sm:h-4 sm:w-4 ${
                         selectedCardSlug === item.card.slug
                           ? "text-white"
                           : "text-blue-600"
@@ -318,9 +318,9 @@ export default function CreateTreeForm() {
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <h4 className="font-medium text-sm text-gray-900 leading-tight">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-2">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-xs sm:text-sm text-gray-900 leading-tight">
                           {idx + 1}. {item.card.name}
                           {selectedCardSlug === item.card.slug && (
                             <span className="ml-2 text-blue-600">✓</span>
@@ -330,14 +330,14 @@ export default function CreateTreeForm() {
                           {item.card.issuer}
                         </p>
                       </div>
-                      <div className="text-right">
-                        <span className="text-xs text-gray-600 whitespace-nowrap block mb-1">
+                      <div className="flex items-center gap-2 sm:text-right sm:flex-col sm:items-end">
+                        <span className="text-xs text-gray-600 whitespace-nowrap">
                           {item.card.annualFee === 0
                             ? "No Fee"
                             : `$${item.card.annualFee}`}
                         </span>
-                        <div className="flex flex-wrap gap-1 justify-end">
-                          {item.card.tags?.map((tag, i) => (
+                        <div className="flex flex-wrap gap-1">
+                          {item.card.tags?.slice(0, 2).map((tag, i) => (
                             <Badge
                               key={i}
                               variant="secondary"
@@ -346,6 +346,11 @@ export default function CreateTreeForm() {
                               {tag}
                             </Badge>
                           ))}
+                          {item.card.tags && item.card.tags.length > 2 && (
+                            <Badge variant="secondary" className="text-xs">
+                              +{item.card.tags.length - 2}
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </div>
