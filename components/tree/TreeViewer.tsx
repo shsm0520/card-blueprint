@@ -74,7 +74,7 @@ function buildLayout(nodes: TreeViewerProps["tree"]["nodes"]) {
   function layoutNode(
     nodeId: string | null,
     depth: number,
-    startX: number
+    startX: number,
   ): number {
     const children = childrenMap.get(nodeId) || [];
 
