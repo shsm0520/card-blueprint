@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description:
     "Build a personalized credit card strategy roadmap. Get recommendations based on your credit profile, Chase 5/24 status, and goals.",
   robots: {
-    index: false, // Don't index creation page
+    index: true, // Don't index creation page
     follow: true,
   },
 };

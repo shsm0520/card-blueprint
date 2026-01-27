@@ -52,7 +52,7 @@ function CardNode({ data }: CardNodeProps) {
 
   return (
     <div className="relative z-10">
-      <Handle type="target" position={Position.Left} className="w-3 h-3" />
+      <Handle type="target" position={Position.Top} className="w-3 h-3" />
 
       <div className="w-72 sm:w-80 bg-white border-2 border-gray-200 rounded-lg shadow-md hover:shadow-lg transition-shadow relative z-10">
         {/* Card Header */}
@@ -150,7 +150,7 @@ function CardNode({ data }: CardNodeProps) {
         </div>
       </div>
 
-      <Handle type="source" position={Position.Right} className="w-3 h-3" />
+      <Handle type="source" position={Position.Bottom} className="w-3 h-3" />
     </div>
   );
 }

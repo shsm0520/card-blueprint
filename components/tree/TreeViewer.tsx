@@ -47,11 +47,11 @@ const nodeTypes: NodeTypes = {
 
 /**
  * Build hierarchical layout for tree nodes
- * Left-to-right layout with vertical spacing for siblings
+ * Top-to-bottom layout with horizontal spacing for siblings
  */
 function buildLayout(nodes: TreeViewerProps["tree"]["nodes"]) {
-  const HORIZONTAL_SPACING = 400; // Left to right spacing
-  const VERTICAL_SPACING = 250; // Vertical spacing between siblings
+  const VERTICAL_SPACING = 300; // Top to bottom spacing (between levels)
+  const HORIZONTAL_SPACING = 350; // Horizontal spacing between siblings
 
   // Build parent-child map
   const childrenMap = new Map<string | null, typeof nodes>();
@@ -70,50 +70,50 @@ function buildLayout(nodes: TreeViewerProps["tree"]["nodes"]) {
 
   const positions = new Map<string, { x: number; y: number }>();
 
-  // Recursive layout - returns the bottom y position
+  // Recursive layout - returns the rightmost x position
   function layoutNode(
     nodeId: string | null,
     depth: number,
-    startY: number
+    startX: number
   ): number {
     const children = childrenMap.get(nodeId) || [];
 
     if (children.length === 0) {
-      return startY;
+      return startX;
     }
 
-    let currentY = startY;
-    const childPositions: Array<{ nodeId: string; y: number }> = [];
+    let currentX = startX;
+    const childPositions: Array<{ nodeId: string; x: number }> = [];
 
     // Layout children
     for (const child of children) {
-      const childY = layoutNode(child.nodeId, depth + 1, currentY);
-      childPositions.push({ nodeId: child.nodeId, y: currentY });
-      currentY = childY + VERTICAL_SPACING;
+      const childX = layoutNode(child.nodeId, depth + 1, currentX);
+      childPositions.push({ nodeId: child.nodeId, x: currentX });
+      currentX = childX + HORIZONTAL_SPACING;
     }
 
-    // Position children at their depth level (left to right)
-    childPositions.forEach(({ nodeId, y }) => {
+    // Position children at their depth level (top to bottom)
+    childPositions.forEach(({ nodeId, x }) => {
       positions.set(nodeId, {
-        x: depth * HORIZONTAL_SPACING,
-        y,
+        x,
+        y: depth * VERTICAL_SPACING,
       });
     });
 
-    // Return the bottommost y position
-    return currentY - VERTICAL_SPACING;
+    // Return the rightmost x position
+    return currentX - HORIZONTAL_SPACING;
   }
 
   // Start layout from root nodes
   const rootNodes = childrenMap.get(null) || [];
-  let currentY = 0;
+  let currentX = 0;
   for (const root of rootNodes) {
-    const endY = layoutNode(root.nodeId, 1, currentY); // Start at depth 1 instead of 0
+    const endX = layoutNode(root.nodeId, 1, currentX); // Start at depth 1 instead of 0
     positions.set(root.nodeId, {
-      x: 0, // Root at x=0
-      y: currentY,
+      x: currentX, // Root at x=currentX
+      y: 0, // Root at y=0
     });
-    currentY = endY + VERTICAL_SPACING;
+    currentX = endX + HORIZONTAL_SPACING;
   }
 
   return positions;
@@ -139,8 +139,8 @@ export default function TreeViewer({ tree }: TreeViewerProps) {
           monthsAfterPrevious: node.monthsAfterPrevious,
           treeId: tree.id,
         },
-        sourcePosition: Position.Right,
-        targetPosition: Position.Left,
+        sourcePosition: Position.Bottom,
+        targetPosition: Position.Top,
       };
     });
   }, [tree.nodes, tree.id, positions]);

@@ -1,128 +1,7 @@
-// Amex cards - static data (JavaScript rendering makes scraping unreliable)
+// Amex cards - using official API
+const AMEX_API_URL =
+  "https://daconsumershop.americanexpress.com/us/cardshop-api/api/v1/cps/content/vac/pageType/25330/?inav=us_menu_cards_personal_cards_view_all_credit_cards&currentUrl=www.americanexpress.com%2Fus%2Fcredit-cards%2F";
 const AMEX_BASE = "https://www.americanexpress.com/us/credit-cards";
-
-// Amex cards with known data as of January 2026
-const KNOWN_CARDS = [
-  // Premium Travel Cards
-  {
-    name: "Platinum Card",
-    path: "/card/platinum-card",
-    annualFee: 895,
-    rewardType: "Travel Points",
-  },
-  {
-    name: "Gold Card",
-    path: "/card/gold-card",
-    annualFee: 325,
-    rewardType: "Travel Points",
-  },
-  {
-    name: "Green Card",
-    path: "/card/green-card",
-    annualFee: 150,
-    rewardType: "Travel Points",
-  },
-
-  // Cash Back Cards
-  {
-    name: "Blue Cash Preferred Card",
-    path: "/card/blue-cash-preferred-credit-card",
-    annualFee: 95,
-    rewardType: "Cashback",
-  },
-  {
-    name: "Blue Cash Everyday Card",
-    path: "/card/blue-cash-everyday-credit-card",
-    annualFee: 0,
-    rewardType: "Cashback",
-  },
-
-  // Delta Co-Branded Cards
-  {
-    name: "Delta SkyMiles Blue Card",
-    path: "/card/delta-skymiles-blue-american-express-card",
-    annualFee: 0,
-    rewardType: "Miles",
-  },
-  {
-    name: "Delta SkyMiles Gold Card",
-    path: "/card/delta-skymiles-gold-american-express-card",
-    annualFee: 150,
-    rewardType: "Miles",
-  },
-  {
-    name: "Delta SkyMiles Platinum Card",
-    path: "/card/delta-skymiles-platinum-american-express-card",
-    annualFee: 350,
-    rewardType: "Miles",
-  },
-  {
-    name: "Delta SkyMiles Reserve Card",
-    path: "/card/delta-skymiles-reserve-american-express-card",
-    annualFee: 650,
-    rewardType: "Miles",
-  },
-
-  // Hilton Co-Branded Cards
-  {
-    name: "Hilton Honors Card",
-    path: "/card/hilton-honors-american-express-card",
-    annualFee: 0,
-    rewardType: "Hotel Points",
-  },
-  {
-    name: "Hilton Honors Surpass Card",
-    path: "/card/hilton-honors-american-express-surpass-card",
-    annualFee: 150,
-    rewardType: "Hotel Points",
-  },
-  {
-    name: "Hilton Honors Aspire Card",
-    path: "/card/hilton-honors-american-express-aspire-card",
-    annualFee: 550,
-    rewardType: "Hotel Points",
-  },
-
-  // Marriott Co-Branded Cards
-  {
-    name: "Marriott Bonvoy Bevy Card",
-    path: "/card/marriott-bonvoy-bevy-american-express-card",
-    annualFee: 250,
-    rewardType: "Hotel Points",
-  },
-  {
-    name: "Marriott Bonvoy Brilliant Card",
-    path: "/card/marriott-bonvoy-brilliant-american-express-card",
-    annualFee: 650,
-    rewardType: "Hotel Points",
-  },
-
-  // Business Cards
-  {
-    name: "Business Platinum Card",
-    path: "/card/business-platinum-card",
-    annualFee: 695,
-    rewardType: "Travel Points",
-  },
-  {
-    name: "Business Gold Card",
-    path: "/card/business-gold-card",
-    annualFee: 375,
-    rewardType: "Travel Points",
-  },
-  {
-    name: "Blue Business Plus Card",
-    path: "/card/blue-business-plus-credit-card",
-    annualFee: 0,
-    rewardType: "Travel Points",
-  },
-  {
-    name: "Blue Business Cash Card",
-    path: "/card/blue-business-cash-card",
-    annualFee: 0,
-    rewardType: "Cashback",
-  },
-];
 
 export type ScrapedCard = {
   name: string;
@@ -132,36 +11,152 @@ export type ScrapedCard = {
   benefits?: string[];
 };
 
+interface AmexApiCard {
+  cardTitle: string;
+  productName: string;
+  fee?: {
+    header: string;
+    text: string;
+  };
+  filters?: string[];
+  welcomeOffer?: {
+    header: string;
+    text: string;
+  };
+  keyProductFeatures?: {
+    features?: Array<{
+      header: string;
+      description: string;
+    }>;
+  };
+  applyNowLink?: {
+    url: string;
+  };
+}
+
+interface AmexApiResponse {
+  cards: AmexApiCard[];
+}
+
 /**
- * Get Amex credit cards from static data
- * Note: Amex uses heavy JavaScript rendering which makes reliable scraping difficult
- * This uses a curated list with known card data that should be updated periodically
+ * Parse annual fee from Amex API text
+ */
+function parseAnnualFee(feeText: string): number {
+  if (!feeText) return 0;
+
+  // Handle "No Annual Fee" or "$0"
+  if (feeText.includes("No Annual Fee") || feeText.includes("$0")) {
+    return 0;
+  }
+
+  // Extract first dollar amount (e.g., "$895", "$95", "$0 intro annual fee for the first year, then $95")
+  const match = feeText.match(/\$(\d+)/);
+  if (match) {
+    return parseInt(match[1], 10);
+  }
+
+  return 0;
+}
+
+/**
+ * Determine reward type based on card filters and features
+ */
+function determineRewardType(card: AmexApiCard): string {
+  const filters = card.filters || [];
+
+  if (filters.includes("cash-back")) {
+    return "Cashback";
+  }
+  if (
+    filters.includes("airline-miles") ||
+    filters.includes("airline-rewards")
+  ) {
+    return "Miles";
+  }
+  if (filters.includes("hotel-rewards")) {
+    return "Hotel Points";
+  }
+  if (filters.includes("travel-rewards") || filters.includes("reward-points")) {
+    return "Travel Points";
+  }
+
+  return "Points";
+}
+
+/**
+ * Extract key benefits from card features
+ */
+function extractBenefits(card: AmexApiCard): string[] {
+  const benefits: string[] = [];
+
+  if (card.welcomeOffer?.header) {
+    benefits.push(card.welcomeOffer.header.replace(/<[^>]*>/g, "").trim());
+  }
+
+  if (card.keyProductFeatures?.features) {
+    card.keyProductFeatures.features.slice(0, 3).forEach((feature) => {
+      if (feature.header) {
+        benefits.push(feature.header.replace(/<[^>]*>/g, "").trim());
+      }
+    });
+  }
+
+  return benefits;
+}
+
+/**
+ * Get Amex credit cards from official API
  */
 export async function crawlAmexAllCards(): Promise<ScrapedCard[]> {
   try {
-    console.log(`Loading ${KNOWN_CARDS.length} known Amex cards...`);
+    console.log("Fetching Amex cards from official API...");
 
-    const results: ScrapedCard[] = KNOWN_CARDS.map((card) => {
-      const fullUrl = card.path.startsWith("http")
-        ? card.path
-        : `${AMEX_BASE}${card.path}/`;
-
-      return {
-        name: card.name,
-        href: fullUrl,
-        annualFee: card.annualFee,
-        rewardType: card.rewardType,
-        benefits: undefined, // Could be added manually if needed
-      };
+    const response = await fetch(AMEX_API_URL, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Accept: "application/json",
+      },
     });
 
-    console.log(
-      `Successfully loaded ${results.length}/${KNOWN_CARDS.length} Amex cards`
-    );
+    if (!response.ok) {
+      throw new Error(
+        `API request failed: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    const data: AmexApiResponse = await response.json();
+
+    if (!data.cards || !Array.isArray(data.cards)) {
+      throw new Error("Invalid API response format");
+    }
+
+    console.log(`Found ${data.cards.length} cards from Amex API`);
+
+    const results: ScrapedCard[] = data.cards
+      .filter((card) => card.cardTitle && card.productName)
+      .map((card) => {
+        // Build card URL
+        const cardUrl =
+          card.applyNowLink?.url || `${AMEX_BASE}/card/${card.productName}/`;
+
+        // Parse annual fee
+        const annualFee = parseAnnualFee(card.fee?.text || "");
+
+        return {
+          name: card.cardTitle.replace(/<[^>]*>/g, "").trim(),
+          href: cardUrl,
+          annualFee,
+          rewardType: determineRewardType(card),
+          benefits: extractBenefits(card),
+        };
+      });
+
+    console.log(`Successfully processed ${results.length} Amex cards`);
 
     return results;
   } catch (error) {
-    console.error("Amex data error:", error);
+    console.error("Amex API error:", error);
     throw error;
   }
 }
