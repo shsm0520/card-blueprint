@@ -58,7 +58,7 @@ function parseAnnualFee(feeText: string): { fee: number; introOffer?: string } {
   if (introMatch) {
     return {
       fee: parseInt(introMatch[1], 10),
-      introOffer: "First year free"
+      introOffer: "First year free",
     };
   }
 
@@ -107,24 +107,26 @@ function determineRewardType(card: AmexApiCard): string {
  */
 function cleanHtmlText(text: string): string {
   if (!text) return "";
-  
-  return text
-    // Remove HTML tags
-    .replace(/<[^>]*>/g, "")
-    // Decode common HTML entities
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#039;/g, "'")
-    .replace(/&nbsp;/g, " ")
-    // Remove numeric HTML entities (like &#8482;, &#174;, &#8225;)
-    .replace(/&#\d+;/g, "")
-    // Remove hex HTML entities (like &#xFE0E;)
-    .replace(/&#x[0-9A-Fa-f]+;/g, "")
-    // Clean up multiple spaces
-    .replace(/\s+/g, " ")
-    .trim();
+
+  return (
+    text
+      // Remove HTML tags
+      .replace(/<[^>]*>/g, "")
+      // Decode common HTML entities
+      .replace(/&amp;/g, "&")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/&quot;/g, '"')
+      .replace(/&#039;/g, "'")
+      .replace(/&nbsp;/g, " ")
+      // Remove numeric HTML entities (like &#8482;, &#174;, &#8225;)
+      .replace(/&#\d+;/g, "")
+      // Remove hex HTML entities (like &#xFE0E;)
+      .replace(/&#x[0-9A-Fa-f]+;/g, "")
+      // Clean up multiple spaces
+      .replace(/\s+/g, " ")
+      .trim()
+  );
 }
 
 /**
@@ -163,7 +165,7 @@ export async function crawlAmexAllCards(): Promise<ScrapedCard[]> {
       },
     });
 
-    if (!responseleanHtmlText(card.cardTitle
+    if (!response.ok) {
       throw new Error(
         `API request failed: ${response.status} ${response.statusText}`,
       );
