@@ -84,19 +84,44 @@ function determineRewardType(card: AmexApiCard): string {
 }
 
 /**
+ * Clean HTML entities and tags from text
+ */
+function cleanHtmlText(text: string): string {
+  if (!text) return "";
+  
+  return text
+    // Remove HTML tags
+    .replace(/<[^>]*>/g, "")
+    // Decode common HTML entities
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    // Remove numeric HTML entities (like &#8482;, &#174;, &#8225;)
+    .replace(/&#\d+;/g, "")
+    // Remove hex HTML entities (like &#xFE0E;)
+    .replace(/&#x[0-9A-Fa-f]+;/g, "")
+    // Clean up multiple spaces
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
  * Extract key benefits from card features
  */
 function extractBenefits(card: AmexApiCard): string[] {
   const benefits: string[] = [];
 
   if (card.welcomeOffer?.header) {
-    benefits.push(card.welcomeOffer.header.replace(/<[^>]*>/g, "").trim());
+    benefits.push(cleanHtmlText(card.welcomeOffer.header));
   }
 
   if (card.keyProductFeatures?.features) {
     card.keyProductFeatures.features.slice(0, 3).forEach((feature) => {
       if (feature.header) {
-        benefits.push(feature.header.replace(/<[^>]*>/g, "").trim());
+        benefits.push(cleanHtmlText(feature.header));
       }
     });
   }
@@ -119,7 +144,7 @@ export async function crawlAmexAllCards(): Promise<ScrapedCard[]> {
       },
     });
 
-    if (!response.ok) {
+    if (!responseleanHtmlText(card.cardTitle
       throw new Error(
         `API request failed: ${response.status} ${response.statusText}`,
       );
