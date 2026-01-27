@@ -9,6 +9,7 @@ export type ScrapedCard = {
   annualFee?: number;
   rewardType?: string;
   benefits?: string[];
+  introOffer?: string;
 };
 
 interface AmexApiCard {
@@ -40,22 +41,40 @@ interface AmexApiResponse {
 
 /**
  * Parse annual fee from Amex API text
+ * Returns both regular fee and intro offer info
  */
-function parseAnnualFee(feeText: string): number {
-  if (!feeText) return 0;
+function parseAnnualFee(feeText: string): { fee: number; introOffer?: string } {
+  if (!feeText) return { fee: 0 };
 
-  // Handle "No Annual Fee" or "$0"
-  if (feeText.includes("No Annual Fee") || feeText.includes("$0")) {
-    return 0;
+  const cleanText = cleanHtmlText(feeText);
+
+  // Handle "No Annual Fee" (without any dollar amount)
+  if (cleanText.includes("No Annual Fee") && !cleanText.match(/\$\d+/)) {
+    return { fee: 0 };
   }
 
-  // Extract first dollar amount (e.g., "$895", "$95", "$0 intro annual fee for the first year, then $95")
-  const match = feeText.match(/\$(\d+)/);
+  // Handle intro offers: "$0 intro... then $95" pattern
+  const introMatch = cleanText.match(/\$0.*?intro.*?then\s+\$(\d+)/i);
+  if (introMatch) {
+    return {
+      fee: parseInt(introMatch[1], 10),
+      introOffer: "First year free"
+    };
+  }
+
+  // Handle "then $95" pattern
+  const thenMatch = cleanText.match(/then\s+\$(\d+)/i);
+  if (thenMatch) {
+    return { fee: parseInt(thenMatch[1], 10) };
+  }
+
+  // Extract any dollar amount (e.g., "$895", "$95")
+  const match = cleanText.match(/\$(\d+)/);
   if (match) {
-    return parseInt(match[1], 10);
+    return { fee: parseInt(match[1], 10) };
   }
 
-  return 0;
+  return { fee: 0 };
 }
 
 /**
@@ -166,14 +185,15 @@ export async function crawlAmexAllCards(): Promise<ScrapedCard[]> {
           card.applyNowLink?.url || `${AMEX_BASE}/card/${card.productName}/`;
 
         // Parse annual fee
-        const annualFee = parseAnnualFee(card.fee?.text || "");
+        const feeInfo = parseAnnualFee(card.fee?.text || "");
 
         return {
-          name: card.cardTitle.replace(/<[^>]*>/g, "").trim(),
+          name: cleanHtmlText(card.cardTitle),
           href: cardUrl,
-          annualFee,
+          annualFee: feeInfo.fee,
           rewardType: determineRewardType(card),
           benefits: extractBenefits(card),
+          introOffer: feeInfo.introOffer,
         };
       });
 
