@@ -6,46 +6,36 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, Copy, ExternalLink, AlertTriangle } from "lucide-react";
 
-interface TokenDisplayProps {
+interface PasswordDisplayProps {
   tree: {
     id: string;
-    editToken: string;
+    editPassword: string;
     title: string;
   };
 }
 
-export default function TokenDisplay({ tree }: TokenDisplayProps) {
+export default function PasswordDisplay({ tree }: PasswordDisplayProps) {
   const router = useRouter();
-  const [copied, setCopied] = useState(false);
-  const [tokenSaved, setTokenSaved] = useState(false);
+  const [passwordSaved, setPasswordSaved] = useState(false);
 
   // For router.push, don't include basePath (Next.js adds it automatically)
   const internalUrl = `/tree/${tree.id}/`;
   // For sharing, include full basePath
   const publicUrl = `/card/tree/${tree.id}/`;
 
-  // Save token to localStorage
+  // Save password to localStorage. Keep legacy tree_token_* for existing code paths.
   useEffect(() => {
     try {
-      localStorage.setItem(`tree_token_${tree.id}`, tree.editToken);
-      setTokenSaved(true);
+      localStorage.setItem(`tree_edit_password_${tree.id}`, tree.editPassword);
+      localStorage.setItem(`tree_token_${tree.id}`, tree.editPassword);
+      queueMicrotask(() => setPasswordSaved(true));
     } catch (error) {
-      console.error("Failed to save token to localStorage:", error);
+      console.error("Failed to save password to localStorage:", error);
     }
-  }, [tree.id, tree.editToken]);
-
-  const handleCopyToken = async () => {
-    try {
-      await navigator.clipboard.writeText(tree.editToken);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error("Failed to copy token:", error);
-    }
-  };
+  }, [tree.id, tree.editPassword]);
 
   const handleViewTree = () => {
-    // Wait a bit to ensure token is saved to localStorage
+    // Wait a bit to ensure password is saved to localStorage
     setTimeout(() => {
       // Navigate to tree in edit mode
       router.push(`${internalUrl}?mode=edit`);
@@ -92,7 +82,7 @@ export default function TokenDisplay({ tree }: TokenDisplayProps) {
             </div>
 
             {/* Auto-save Status */}
-            {tokenSaved && (
+            {passwordSaved && (
               <div className="flex items-center gap-2 text-sm text-green-700">
                 <CheckCircle2 className="h-4 w-4" />
                 Password saved to this browser
@@ -102,7 +92,7 @@ export default function TokenDisplay({ tree }: TokenDisplayProps) {
             <div className="text-xs text-amber-700 space-y-1">
               <p>✓ Your password is saved in your browser for this device</p>
               <p>
-                ✓ To edit from another device, you'll need to enter your
+                ✓ To edit from another device, you&apos;ll need to enter your
                 password
               </p>
               <p>
@@ -145,7 +135,7 @@ export default function TokenDisplay({ tree }: TokenDisplayProps) {
       {/* Next Steps */}
       <div className="p-4 bg-white border border-gray-200 rounded-lg">
         <h4 className="text-sm font-semibold text-gray-900 mb-3">
-          What's Next?
+          What&apos;s Next?
         </h4>
         <ul className="space-y-2 text-sm text-gray-700">
           <li className="flex items-start gap-2">
@@ -155,8 +145,8 @@ export default function TokenDisplay({ tree }: TokenDisplayProps) {
           <li className="flex items-start gap-2">
             <span className="text-blue-600 font-bold">2.</span>
             <span>
-              Customize your tree by adding or removing cards (requires edit
-              token)
+              Customize your tree by adding or removing cards (requires your
+              edit password)
             </span>
           </li>
           <li className="flex items-start gap-2">

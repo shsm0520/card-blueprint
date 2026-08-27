@@ -16,14 +16,14 @@ const createNodeSchema = z.object({
 });
 
 /**
- * Verify edit token for tree
+ * Verify edit password for tree
  */
 async function verifyTreeEditToken(
   treeId: string,
   editToken: string | null
 ): Promise<{ authorized: boolean; error?: string }> {
   if (!editToken) {
-    return { authorized: false, error: "Edit token required" };
+    return { authorized: false, error: "Edit password required" };
   }
 
   const tree = await prisma.cardTree.findUnique({
@@ -37,7 +37,7 @@ async function verifyTreeEditToken(
 
   const isValid = await verifyToken(editToken, tree.editTokenHash);
   if (!isValid) {
-    return { authorized: false, error: "Invalid edit token" };
+    return { authorized: false, error: "Invalid edit password" };
   }
 
   return { authorized: true };
@@ -45,7 +45,7 @@ async function verifyTreeEditToken(
 
 /**
  * POST /api/trees/[id]/nodes
- * Add a new node to the tree (requires edit_token)
+ * Add a new node to the tree (requires edit password)
  */
 export async function POST(
   request: NextRequest,
@@ -54,7 +54,7 @@ export async function POST(
   try {
     const { id: treeId } = await params;
 
-    // Verify edit token
+    // Verify edit password
     const editToken = request.headers.get("x-edit-token");
     const authResult = await verifyTreeEditToken(treeId, editToken);
 
