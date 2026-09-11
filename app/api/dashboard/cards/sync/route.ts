@@ -22,11 +22,12 @@ export async function POST(request: NextRequest) {
     const url = new URL(request.url);
     const issuerParam = url.searchParams.get("issuer")?.toLowerCase();
 
-    let allCards: Array<{
+    const allCards: Array<{
       name: string;
       href: string;
       slug: string;
       issuer: string;
+      cardType?: "personal" | "business";
       annualFee?: number;
       rewardType?: string;
       benefits?: string[];
@@ -60,9 +61,10 @@ export async function POST(request: NextRequest) {
     const results = await Promise.allSettled(
       allCards.map((card) => {
         // Determine card type and 5/24 counting
-        const isBusiness = /business/i.test(card.name);
-        const cardType = isBusiness ? "business" : "personal";
-        const countsToward524 = !isBusiness; // Business cards don't count toward 5/24
+        // Prefer scraper-provided cardType; fallback to name matching (e.g. Chase scraper)
+        const cardType =
+          card.cardType ?? (/business/i.test(card.name) ? "business" : "personal");
+        const countsToward524 = cardType !== "business"; // Business cards don't count toward 5/24
 
         // Build tags array: start with rewardType if available, then add benefits
         const tags: string[] = [];

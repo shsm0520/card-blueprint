@@ -139,7 +139,9 @@ function cleanHtmlText(text: string): string {
  * Maps Amex card name / product name to canonical slug
  */
 export function getCanonicalAmexSlug(cardName: string, productName?: string): string {
-  const normalized = cleanHtmlText(cardName).toLowerCase();
+  const normalizedCardName = cleanHtmlText(cardName).toLowerCase();
+  const normalizedProductName = cleanHtmlText(productName || "").toLowerCase();
+  const normalized = `${normalizedCardName} ${normalizedProductName}`.trim();
 
   if (normalized.includes("platinum") && !normalized.includes("delta") && !normalized.includes("business")) {
     return "amex-platinum";
@@ -157,8 +159,9 @@ export function getCanonicalAmexSlug(cardName: string, productName?: string): st
   // Fallback for other Amex cards
   const cleanName = normalized
     .replace(/^american express\s*/i, "")
-    .replace(/\s*american express\s*/i, " ")
-    .replace(/\s*card\s*/i, "")
+    .replace(/\bamerican express\b/gi, " ")
+    .replace(/\bcard\b/gi, " ")
+    .replace(/\s+/g, " ")
     .trim();
 
   const slugBody = cleanName
