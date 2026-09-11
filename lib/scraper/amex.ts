@@ -5,11 +5,13 @@ const AMEX_BASE = "https://www.americanexpress.com/us/credit-cards";
 
 export type ScrapedCard = {
   name: string;
+  slug: string;
   href: string;
   annualFee?: number;
   rewardType?: string;
   benefits?: string[];
   introOffer?: string;
+  cardType?: "personal" | "business";
 };
 
 interface AmexApiCard {
@@ -119,14 +121,51 @@ function cleanHtmlText(text: string): string {
       .replace(/&quot;/g, '"')
       .replace(/&#039;/g, "'")
       .replace(/&nbsp;/g, " ")
-      // Remove numeric HTML entities (like &#8482;, &#174;, &#8225;)
+      .replace(/&reg;/gi, "")
+      .replace(/&trade;/gi, "")
+      // Remove numeric HTML entities
       .replace(/&#\d+;/g, "")
-      // Remove hex HTML entities (like &#xFE0E;)
+      // Remove hex HTML entities
       .replace(/&#x[0-9A-Fa-f]+;/g, "")
+      // Remove registration / trademark symbols
+      .replace(/[®™‡]/g, "")
       // Clean up multiple spaces
       .replace(/\s+/g, " ")
       .trim()
   );
+}
+
+/**
+ * Maps Amex card name / product name to canonical slug
+ */
+export function getCanonicalAmexSlug(cardName: string, productName?: string): string {
+  const normalized = cleanHtmlText(cardName).toLowerCase();
+
+  if (normalized.includes("platinum") && !normalized.includes("delta") && !normalized.includes("business")) {
+    return "amex-platinum";
+  }
+  if (normalized.includes("gold") && !normalized.includes("delta") && !normalized.includes("business")) {
+    return "amex-gold";
+  }
+  if (normalized.includes("blue cash preferred")) {
+    return "amex-blue-cash-preferred";
+  }
+  if (normalized.includes("blue cash everyday")) {
+    return "amex-blue-cash-everyday";
+  }
+
+  // Fallback for other Amex cards
+  const cleanName = normalized
+    .replace(/^american express\s*/i, "")
+    .replace(/\s*american express\s*/i, " ")
+    .replace(/\s*card\s*/i, "")
+    .trim();
+
+  const slugBody = cleanName
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return `amex-${slugBody}`;
 }
 
 /**
@@ -189,13 +228,18 @@ export async function crawlAmexAllCards(): Promise<ScrapedCard[]> {
         // Parse annual fee
         const feeInfo = parseAnnualFee(card.fee?.text || "");
 
+        const cleanName = cleanHtmlText(card.cardTitle);
+        const isBusiness = /business/i.test(cleanName) || /business/i.test(card.productName || "");
+
         return {
-          name: cleanHtmlText(card.cardTitle),
+          name: cleanName,
+          slug: getCanonicalAmexSlug(cleanName, card.productName),
           href: cardUrl,
           annualFee: feeInfo.fee,
           rewardType: determineRewardType(card),
           benefits: extractBenefits(card),
           introOffer: feeInfo.introOffer,
+          cardType: isBusiness ? "business" : "personal",
         };
       });
 

@@ -51,11 +51,8 @@ export async function POST(request: NextRequest) {
       allCards.push(
         ...amexCards.map((card) => ({
           ...card,
-          slug: `amex-${card.name
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-+|-+$/g, "")}`,
-          issuer: "American Express",
+          slug: card.slug,
+          issuer: "Amex",
         }))
       );
     }
@@ -75,6 +72,8 @@ export async function POST(request: NextRequest) {
         if (card.benefits && card.benefits.length > 0) {
           tags.push(...card.benefits);
         }
+        // Deduplicate tags
+        const uniqueTags = Array.from(new Set(tags));
 
         return prisma.card.upsert({
           where: { slug: card.slug },
@@ -83,7 +82,7 @@ export async function POST(request: NextRequest) {
             issuer: card.issuer,
             cardType,
             annualFee: card.annualFee ?? 0,
-            tags: JSON.stringify(tags),
+            tags: JSON.stringify(uniqueTags),
             countsToward524,
             externalUrls: JSON.stringify([card.href]),
             lastCrawledAt: new Date(),
@@ -96,7 +95,7 @@ export async function POST(request: NextRequest) {
             issuer: card.issuer,
             cardType,
             annualFee: card.annualFee ?? 0,
-            tags: JSON.stringify(tags),
+            tags: JSON.stringify(uniqueTags),
             countsToward524,
             externalUrls: JSON.stringify([card.href]),
             lastCrawledAt: new Date(),
@@ -121,7 +120,7 @@ export async function POST(request: NextRequest) {
         failed: failed.length,
         byIssuer: {
           chase: allCards.filter((c) => c.issuer === "Chase").length,
-          amex: allCards.filter((c) => c.issuer === "American Express").length,
+          amex: allCards.filter((c) => c.issuer === "Amex").length,
         },
       },
     });
