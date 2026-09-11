@@ -53,9 +53,12 @@ export default function TreePageClient({
   tree: initialTree,
   startInEdit,
 }: TreePageClientProps) {
-  const { hasEditToken, editToken, isLoading, saveToken } = useEditToken(
-    initialTree.id
-  );
+  const {
+    hasEditPassword,
+    editPassword: editToken,
+    isLoading,
+    savePassword,
+  } = useEditToken(initialTree.id);
   const [isEditMode, setIsEditMode] = useState(false);
   const [tree, setTree] = useState(initialTree);
   const [showPasswordDialog, setShowPasswordDialog] = useState(false);
@@ -64,12 +67,12 @@ export default function TreePageClient({
   const [isVerifying, setIsVerifying] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
 
-  // If asked to start in edit and token exists, enable edit mode automatically
+  // If asked to start in edit and password exists, enable edit mode automatically
   useEffect(() => {
-    if (startInEdit && hasEditToken && !isEditMode) {
+    if (startInEdit && hasEditPassword && !isEditMode) {
       setIsEditMode(true);
     }
-  }, [startInEdit, hasEditToken, isEditMode]);
+  }, [startInEdit, hasEditPassword, isEditMode]);
 
   const handleTreeUpdate = async () => {
     // Refetch tree data
@@ -85,7 +88,7 @@ export default function TreePageClient({
   };
 
   const handleEditClick = () => {
-    if (hasEditToken) {
+    if (hasEditPassword) {
       setIsEditMode(true);
     } else {
       setShowPasswordDialog(true);
@@ -118,7 +121,7 @@ export default function TreePageClient({
       }
 
       // Password is correct - save it
-      saveToken(password);
+      savePassword(password);
       setShowPasswordDialog(false);
       setPassword("");
       setIsEditMode(true);
@@ -135,7 +138,7 @@ export default function TreePageClient({
       {!isLoading && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col sm:flex-row justify-end gap-2">
-            {isEditMode && hasEditToken ? (
+            {isEditMode && hasEditPassword ? (
               <Button
                 onClick={() => setIsEditMode(false)}
                 variant="default"

@@ -2,17 +2,19 @@ import { nanoid } from 'nanoid'
 import bcrypt from 'bcryptjs'
 
 /**
- * Generate a new edit token (plain text)
- * This should be shown to the user only once at tree creation
+ * Generate a new edit secret (plain text).
+ *
+ * Password-based trees currently provide this secret from user input; this
+ * helper remains for compatibility with older token-based flows.
  */
 export function generateEditToken(): string {
-  // Generate a 32-character random token
+  // Generate a 32-character random secret
   return nanoid(32)
 }
 
 /**
- * Hash an edit token for storage in the database
- * Never store plain tokens in the database
+ * Hash an edit password/secret for storage in the database.
+ * Never store plain edit credentials in the database.
  */
 export async function hashToken(token: string): Promise<string> {
   const saltRounds = 10
@@ -20,21 +22,21 @@ export async function hashToken(token: string): Promise<string> {
 }
 
 /**
- * Verify an edit token against the stored hash
- * Returns true if the token matches
+ * Verify an edit password/secret against the stored hash.
+ * Returns true if the credential matches.
  */
 export async function verifyToken(token: string, hash: string): Promise<boolean> {
   try {
     return await bcrypt.compare(token, hash)
   } catch (error) {
-    console.error('Token verification error:', error)
+    console.error('Edit credential verification error:', error)
     return false
   }
 }
 
 /**
- * Generate and hash a token in one step
- * Returns both the plain token (to show user) and hash (to store in DB)
+ * Generate and hash an edit secret in one step.
+ * Returns both the plain secret and hash.
  */
 export async function createEditToken(): Promise<{
   token: string

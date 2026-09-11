@@ -15,7 +15,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, CreditCard, Eye } from "lucide-react";
-import TokenDisplay from "./TokenDisplay";
+import PasswordDisplay from "./PasswordDisplay";
 
 interface TemplatePreview {
   card: {
@@ -38,7 +38,7 @@ export default function CreateTreeForm() {
   const [error, setError] = useState<string | null>(null);
   const [createdTree, setCreatedTree] = useState<{
     id: string;
-    editToken: string;
+    editPassword: string;
     title: string;
   } | null>(null);
 
@@ -142,13 +142,15 @@ export default function CreateTreeForm() {
         throw new Error(data.error || "Failed to create tree");
       }
 
-      // Save password to localStorage for this tree
+      // Save password to localStorage for this tree.
+      // Keep the legacy tree_token_* key so existing edit sessions continue to work.
+      localStorage.setItem(`tree_edit_password_${data.data.id}`, password);
       localStorage.setItem(`tree_token_${data.data.id}`, password);
 
       // Show success screen
       setCreatedTree({
         id: data.data.id,
-        editToken: password, // Pass password as editToken for compatibility
+        editPassword: password,
         title: data.data.title,
       });
     } catch (err) {
@@ -158,9 +160,9 @@ export default function CreateTreeForm() {
     }
   };
 
-  // If tree was created, show token display
+  // If tree was created, show password confirmation screen
   if (createdTree) {
-    return <TokenDisplay tree={createdTree} />;
+    return <PasswordDisplay tree={createdTree} />;
   }
 
   return (

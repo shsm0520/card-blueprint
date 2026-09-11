@@ -73,7 +73,7 @@ export async function GET(
       },
     }));
 
-    // Don't expose edit token hash
+    // Don't expose edit password hash
     const { editTokenHash, ...treeData } = tree;
 
     return NextResponse.json({
@@ -97,7 +97,7 @@ export async function GET(
 
 /**
  * PUT /api/trees/[id]
- * Update tree metadata (requires edit_token)
+ * Update tree metadata (requires edit password)
  */
 export async function PUT(
   request: NextRequest,
@@ -106,19 +106,19 @@ export async function PUT(
   try {
     const { id } = await params;
 
-    // Get edit token from header
+    // Get edit password from header
     const editToken = request.headers.get("x-edit-token");
     if (!editToken) {
       return NextResponse.json(
         {
           success: false,
-          error: "Edit token required",
+          error: "Edit password required",
         },
         { status: 401 }
       );
     }
 
-    // Verify tree exists and get token hash
+    // Verify tree exists and get password hash
     const tree = await prisma.cardTree.findUnique({
       where: { id },
       select: { editTokenHash: true },
@@ -134,13 +134,13 @@ export async function PUT(
       );
     }
 
-    // Verify edit token
+    // Verify edit password
     const isValid = await verifyToken(editToken, tree.editTokenHash);
     if (!isValid) {
       return NextResponse.json(
         {
           success: false,
-          error: "Invalid edit token",
+          error: "Invalid edit password",
         },
         { status: 403 }
       );
