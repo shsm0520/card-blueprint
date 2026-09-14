@@ -87,7 +87,7 @@ export async function PUT(
     const body = await request.json();
     const validatedData = updateNodeSchema.parse(body);
 
-    // Verify parent node exists if specified
+    // Verify parent node exists and is not a descendant (prevent circular relationship)
     if (validatedData.parentNodeId !== undefined) {
       if (validatedData.parentNodeId === nodeId) {
         return NextResponse.json(
@@ -100,14 +100,16 @@ export async function PUT(
       }
 
       if (validatedData.parentNodeId) {
-        const parentNode = await prisma.cardNode.findFirst({
-          where: {
-            nodeId: validatedData.parentNodeId,
-            treeId,
-          },
+        const allNodes = await prisma.cardNode.findMany({
+          where: { treeId },
+          select: { nodeId: true, parentNodeId: true },
         });
 
-        if (!parentNode) {
+        const targetParentNode = allNodes.find(
+          (n) => n.nodeId === validatedData.parentNodeId
+        );
+
+        if (!targetParentNode) {
           return NextResponse.json(
             {
               success: false,
@@ -115,6 +117,30 @@ export async function PUT(
             },
             { status: 400 }
           );
+        }
+
+        // Check if the target parent is a descendant of current nodeId
+        const parentMap = new Map<string, string | null>();
+        allNodes.forEach((n) => parentMap.set(n.nodeId, n.parentNodeId));
+
+        let currentId: string | null = validatedData.parentNodeId;
+        const visited = new Set<string>();
+
+        while (currentId) {
+          if (currentId === nodeId) {
+            return NextResponse.json(
+              {
+                success: false,
+                error: "Cannot set parent node to a descendant node (circular dependency)",
+              },
+              { status: 400 }
+            );
+          }
+          if (visited.has(currentId)) {
+            break;
+          }
+          visited.add(currentId);
+          currentId = parentMap.get(currentId) || null;
         }
       }
     }
