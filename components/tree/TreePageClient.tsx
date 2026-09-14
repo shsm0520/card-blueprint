@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useEditToken } from "@/lib/hooks/useEditToken";
 import TreeViewer from "./TreeViewer";
 import TreeEditor from "../edit/TreeEditor";
@@ -66,13 +66,15 @@ export default function TreePageClient({
   const [passwordError, setPasswordError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const hasAutoEnteredEditRef = useRef(false);
 
-  // If asked to start in edit and password exists, enable edit mode automatically
+  // If asked to start in edit and password exists, enable edit mode automatically on initial load
   useEffect(() => {
-    if (startInEdit && hasEditPassword && !isEditMode) {
+    if (!isLoading && startInEdit && hasEditPassword && !hasAutoEnteredEditRef.current) {
+      hasAutoEnteredEditRef.current = true;
       setIsEditMode(true);
     }
-  }, [startInEdit, hasEditPassword, isEditMode]);
+  }, [isLoading, startInEdit, hasEditPassword]);
 
   const handleTreeUpdate = async () => {
     // Refetch tree data
@@ -125,7 +127,7 @@ export default function TreePageClient({
       setShowPasswordDialog(false);
       setPassword("");
       setIsEditMode(true);
-    } catch (error) {
+    } catch {
       setPasswordError("Failed to verify password");
     } finally {
       setIsVerifying(false);
