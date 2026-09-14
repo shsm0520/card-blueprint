@@ -58,4 +58,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
 
 # Use dumb-init to handle signals, and run migrations before starting
 # dumb-init -> sh -> migrate -> seed -> npm start
-ENTRYPOINT ["/usr/bin/dumb-init", "sh", "-c", "npx prisma migrate deploy && (npx prisma db seed || true) && npm start"]
+ENTRYPOINT ["/usr/bin/dumb-init", "sh", "-c", "cd /app && npx prisma migrate deploy && (npx prisma db seed || true) && npm start"]
