@@ -100,23 +100,23 @@ export default function TreePageClient({
     setIsVerifying(true);
 
     try {
-      // Verify password by trying to update tree metadata
-      const res = await fetch(`/card/api/trees/${initialTree.id}/`, {
-        method: "PUT",
+      // Verify password using dedicated verification API
+      const res = await fetch(`/card/api/trees/${initialTree.id}/verify/`, {
+        method: "POST",
         headers: {
-          "Content-Type": "application/json",
           "X-Edit-Token": password,
         },
-        body: JSON.stringify({
-          title: tree.title, // No change, just verify
-        }),
       });
 
       const data = await res.json();
 
-      if (res.status === 403 || !data.success) {
+      if (res.status === 401 || res.status === 403) {
         setPasswordError("Incorrect password");
-        setIsVerifying(false);
+        return;
+      }
+
+      if (!res.ok || !data.success) {
+        setPasswordError(data.error || "Server error occurred. Please try again.");
         return;
       }
 
@@ -125,8 +125,8 @@ export default function TreePageClient({
       setShowPasswordDialog(false);
       setPassword("");
       setIsEditMode(true);
-    } catch (error) {
-      setPasswordError("Failed to verify password");
+    } catch {
+      setPasswordError("Server error occurred. Please try again.");
     } finally {
       setIsVerifying(false);
     }
