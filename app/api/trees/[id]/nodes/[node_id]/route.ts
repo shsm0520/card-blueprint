@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth/token";
 import { z } from "zod";
+import { validateChase524Status } from "@/lib/chase524";
 
 // Validation schema
 const updateNodeSchema = z.object({
@@ -70,6 +71,13 @@ export async function PUT(
       where: {
         nodeId,
         treeId,
+      },
+      include: {
+        card: {
+          select: {
+            issuer: true,
+          },
+        },
       },
     });
 
@@ -145,6 +153,81 @@ export async function PUT(
       }
     }
 
+    // Calculate effective plannedDate for the node
+    let effectivePlannedDate: Date | null = existingNode.plannedDate;
+
+    if (validatedData.plannedDate !== undefined) {
+      effectivePlannedDate = validatedData.plannedDate
+        ? new Date(validatedData.plannedDate)
+        : null;
+    } else if (
+      validatedData.parentNodeId !== undefined ||
+      validatedData.monthsAfterPrevious !== undefined
+    ) {
+      const parentId =
+        validatedData.parentNodeId !== undefined
+          ? validatedData.parentNodeId
+          : existingNode.parentNodeId;
+      const monthsAfter =
+        validatedData.monthsAfterPrevious !== undefined
+          ? validatedData.monthsAfterPrevious
+          : existingNode.monthsAfterPrevious;
+
+      if (parentId && monthsAfter) {
+        const parentNode = await prisma.cardNode.findFirst({
+          where: {
+            nodeId: parentId,
+            treeId,
+          },
+          select: { plannedDate: true },
+        });
+
+        if (parentNode?.plannedDate) {
+          effectivePlannedDate = new Date(parentNode.plannedDate);
+          effectivePlannedDate.setMonth(
+            effectivePlannedDate.getMonth() + monthsAfter
+          );
+        }
+      }
+    }
+
+    // Check 5/24 validation on date update
+    const tree = await prisma.cardTree.findUnique({
+      where: { id: treeId },
+      select: { chase524Status: true },
+    });
+
+    if (tree) {
+      const allTreeNodes = await prisma.cardNode.findMany({
+        where: { treeId },
+        select: {
+          nodeId: true,
+          plannedDate: true,
+          countsToward524: true,
+        },
+      });
+
+      const validationResult = validateChase524Status({
+        chase524Status: tree.chase524Status,
+        targetCardIssuer: existingNode.card.issuer,
+        targetCardCountsToward524: existingNode.countsToward524,
+        targetPlannedDate: effectivePlannedDate,
+        existingNodes: allTreeNodes,
+        currentNodeId: nodeId,
+      });
+
+      if (!validationResult.valid) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: validationResult.error,
+            warning: true,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     // Update node
     const updatedNode = await prisma.cardNode.update({
       where: {
@@ -160,11 +243,7 @@ export async function PUT(
         ...(validatedData.note !== undefined && {
           note: validatedData.note,
         }),
-        ...(validatedData.plannedDate !== undefined && {
-          plannedDate: validatedData.plannedDate
-            ? new Date(validatedData.plannedDate)
-            : null,
-        }),
+        plannedDate: effectivePlannedDate,
         ...(validatedData.monthsAfterPrevious !== undefined && {
           monthsAfterPrevious: validatedData.monthsAfterPrevious,
         }),

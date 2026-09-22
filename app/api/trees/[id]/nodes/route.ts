@@ -3,6 +3,7 @@ import { nanoid } from "nanoid";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth/token";
 import { z } from "zod";
+import { validateChase524Status } from "@/lib/chase524";
 
 // Validation schema
 const createNodeSchema = z.object({
@@ -160,45 +161,34 @@ export async function POST(
     }
 
     // 5/24 Validation: Check if tree is under 5/24 and card counts toward it
-    if (tree.chase524Status === "under" && countsToward524) {
-      // Count existing nodes that count toward 5/24
-      const existingNodes = await prisma.cardNode.findMany({
-        where: {
-          treeId,
-          countsToward524: true,
+    const existingNodes = await prisma.cardNode.findMany({
+      where: {
+        treeId,
+      },
+      select: {
+        nodeId: true,
+        plannedDate: true,
+        countsToward524: true,
+      },
+    });
+
+    const validationResult = validateChase524Status({
+      chase524Status: tree.chase524Status,
+      targetCardIssuer: card.issuer,
+      targetCardCountsToward524: countsToward524,
+      targetPlannedDate: calculatedPlannedDate,
+      existingNodes,
+    });
+
+    if (!validationResult.valid) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: validationResult.error,
+          warning: true,
         },
-        include: {
-          card: {
-            select: {
-              issuer: true,
-            },
-          },
-        },
-      });
-
-      // Filter nodes within 24 months if plannedDate exists
-      let nodesIn24Months = existingNodes;
-      if (calculatedPlannedDate) {
-        const twentyFourMonthsAgo = new Date(calculatedPlannedDate);
-        twentyFourMonthsAgo.setMonth(twentyFourMonthsAgo.getMonth() - 24);
-
-        nodesIn24Months = existingNodes.filter((node) => {
-          if (!node.plannedDate) return true; // Include nodes without dates (assume they count)
-          return new Date(node.plannedDate) > twentyFourMonthsAgo;
-        });
-      }
-
-      // Check if adding this card would violate 5/24 for Chase cards
-      if (card.issuer === "Chase" && nodesIn24Months.length >= 5) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `5/24 Rule Violation: You already have ${nodesIn24Months.length} cards in the last 24 months. Chase cards require being under 5/24.`,
-            warning: true,
-          },
-          { status: 400 }
-        );
-      }
+        { status: 400 }
+      );
     }
 
     // Create node
