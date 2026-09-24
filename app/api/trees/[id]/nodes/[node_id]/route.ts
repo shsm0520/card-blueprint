@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyToken } from "@/lib/auth/token";
 import { z } from "zod";
+import { validateChase524Status } from "@/lib/chase524";
 
 // Validation schema
 const updateNodeSchema = z.object({
@@ -71,6 +72,13 @@ export async function PUT(
         nodeId,
         treeId,
       },
+      include: {
+        card: {
+          select: {
+            issuer: true,
+          },
+        },
+      },
     });
 
     if (!existingNode) {
@@ -87,7 +95,7 @@ export async function PUT(
     const body = await request.json();
     const validatedData = updateNodeSchema.parse(body);
 
-    // Verify parent node exists if specified
+    // Verify parent node exists and is not a descendant (prevent circular relationship)
     if (validatedData.parentNodeId !== undefined) {
       if (validatedData.parentNodeId === nodeId) {
         return NextResponse.json(
@@ -100,14 +108,16 @@ export async function PUT(
       }
 
       if (validatedData.parentNodeId) {
-        const parentNode = await prisma.cardNode.findFirst({
-          where: {
-            nodeId: validatedData.parentNodeId,
-            treeId,
-          },
+        const allNodes = await prisma.cardNode.findMany({
+          where: { treeId },
+          select: { nodeId: true, parentNodeId: true },
         });
 
-        if (!parentNode) {
+        const targetParentNode = allNodes.find(
+          (n) => n.nodeId === validatedData.parentNodeId
+        );
+
+        if (!targetParentNode) {
           return NextResponse.json(
             {
               success: false,
@@ -116,6 +126,105 @@ export async function PUT(
             { status: 400 }
           );
         }
+
+        // Check if the target parent is a descendant of current nodeId
+        const parentMap = new Map<string, string | null>();
+        allNodes.forEach((n) => parentMap.set(n.nodeId, n.parentNodeId));
+
+        let currentId: string | null = validatedData.parentNodeId;
+        const visited = new Set<string>();
+
+        while (currentId) {
+          if (currentId === nodeId) {
+            return NextResponse.json(
+              {
+                success: false,
+                error: "Cannot set parent node to a descendant node (circular dependency)",
+              },
+              { status: 400 }
+            );
+          }
+          if (visited.has(currentId)) {
+            break;
+          }
+          visited.add(currentId);
+          currentId = parentMap.get(currentId) || null;
+        }
+      }
+    }
+
+    // Calculate effective plannedDate for the node
+    let effectivePlannedDate: Date | null = existingNode.plannedDate;
+
+    if (validatedData.plannedDate !== undefined) {
+      effectivePlannedDate = validatedData.plannedDate
+        ? new Date(validatedData.plannedDate)
+        : null;
+    } else if (
+      validatedData.parentNodeId !== undefined ||
+      validatedData.monthsAfterPrevious !== undefined
+    ) {
+      const parentId =
+        validatedData.parentNodeId !== undefined
+          ? validatedData.parentNodeId
+          : existingNode.parentNodeId;
+      const monthsAfter =
+        validatedData.monthsAfterPrevious !== undefined
+          ? validatedData.monthsAfterPrevious
+          : existingNode.monthsAfterPrevious;
+
+      if (parentId && monthsAfter) {
+        const parentNode = await prisma.cardNode.findFirst({
+          where: {
+            nodeId: parentId,
+            treeId,
+          },
+          select: { plannedDate: true },
+        });
+
+        if (parentNode?.plannedDate) {
+          effectivePlannedDate = new Date(parentNode.plannedDate);
+          effectivePlannedDate.setMonth(
+            effectivePlannedDate.getMonth() + monthsAfter
+          );
+        }
+      }
+    }
+
+    // Check 5/24 validation on date update
+    const tree = await prisma.cardTree.findUnique({
+      where: { id: treeId },
+      select: { chase524Status: true },
+    });
+
+    if (tree) {
+      const allTreeNodes = await prisma.cardNode.findMany({
+        where: { treeId },
+        select: {
+          nodeId: true,
+          plannedDate: true,
+          countsToward524: true,
+        },
+      });
+
+      const validationResult = validateChase524Status({
+        chase524Status: tree.chase524Status,
+        targetCardIssuer: existingNode.card.issuer,
+        targetCardCountsToward524: existingNode.countsToward524,
+        targetPlannedDate: effectivePlannedDate,
+        existingNodes: allTreeNodes,
+        currentNodeId: nodeId,
+      });
+
+      if (!validationResult.valid) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: validationResult.error,
+            warning: true,
+          },
+          { status: 400 }
+        );
       }
     }
 
@@ -134,11 +243,7 @@ export async function PUT(
         ...(validatedData.note !== undefined && {
           note: validatedData.note,
         }),
-        ...(validatedData.plannedDate !== undefined && {
-          plannedDate: validatedData.plannedDate
-            ? new Date(validatedData.plannedDate)
-            : null,
-        }),
+        plannedDate: effectivePlannedDate,
         ...(validatedData.monthsAfterPrevious !== undefined && {
           monthsAfterPrevious: validatedData.monthsAfterPrevious,
         }),

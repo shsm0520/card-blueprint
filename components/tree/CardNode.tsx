@@ -35,7 +35,8 @@ function CardNode({ data }: CardNodeProps) {
   useEffect(() => {
     async function fetchReferrals() {
       try {
-        const res = await fetch(`/card/api/referrals/?card_id=${card.id}/`);
+        const params = new URLSearchParams({ card_id: card.id });
+        const res = await fetch(`/card/api/referrals/?${params.toString()}`);
         const data = await res.json();
         if (data.success) {
           setReferrals(data.data);
